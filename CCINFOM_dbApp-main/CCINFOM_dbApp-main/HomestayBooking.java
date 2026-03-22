@@ -47,7 +47,7 @@ public class HomestayBooking extends JFrame {
     private static final String DEFAULT_DB_HOST = "localhost";
     private static final String DEFAULT_DB_PORT = "3306";
     private static final String DEFAULT_DB_USER = "root";
-    private static final String DEFAULT_DB_PASSWORD = "";
+    private static final String DEFAULT_DB_PASSWORD = "Minions230319!";
     private static final String MYSQL_DRIVER_CLASS = "com.mysql.cj.jdbc.Driver";
 
     private JTable guideTable;
@@ -64,6 +64,18 @@ public class HomestayBooking extends JFrame {
 
     private JComboBox<String> guideSpecializationCombo;
 
+    private JTable guideHiringTable;
+    private DefaultTableModel guideHiringModel;
+
+    private JTextField guideHireIdField;
+    private JTextField guideHiringDateField;
+    private JTextField guideHiringFeeField;
+    private JTextField guideHiringSearchField;
+
+    private JComboBox<SelectionItem> guideHiringGuestCombo;
+    private JComboBox<SelectionItem> guideHiringGuideCombo;
+    private JComboBox<String> guideHiringStatusCombo;
+
     public HomestayBooking() {
         connectDatabase();
 
@@ -77,10 +89,12 @@ public class HomestayBooking extends JFrame {
         // Functional tabs
         tabs.add("Homestay", homestayPanel());
         tabs.add("Guide", guidePanel());
+        tabs.add("Guide Hiring", guideHiringPanel());
         tabs.add("Tour Packages", tourPackagePanel());
         tabs.add("Guest Management", guestPanel());
         tabs.add("Guest Transaction", transactionPanel());
         tabs.add("Booking History Report", reportPanel());
+        
 
         add(tabs);
         setVisible(true);
@@ -694,6 +708,584 @@ public class HomestayBooking extends JFrame {
             JOptionPane.showMessageDialog(this, "Sample guides processed. New rows added: " + affectedRows);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Error adding sample guides: " + ex.getMessage());
+        }
+    }
+
+    private JPanel guideHiringPanel() {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+    
+        JPanel formPanel = new JPanel(new GridLayout(6, 2, 8, 8));
+    
+        guideHireIdField = new JTextField();
+        guideHireIdField.setEditable(false);
+    
+        guideHiringGuestCombo = new JComboBox<>();
+        guideHiringGuideCombo = new JComboBox<>();
+    
+        guideHiringDateField = new JTextField();
+        guideHiringFeeField = new JTextField();
+        guideHiringSearchField = new JTextField();
+    
+        guideHiringStatusCombo = new JComboBox<>(new String[]{
+                "Pending", "Confirmed", "Cancelled"
+        });
+    
+        formPanel.add(new JLabel("Guide Hire ID:"));
+        formPanel.add(guideHireIdField);
+    
+        formPanel.add(new JLabel("Guest:"));
+        formPanel.add(guideHiringGuestCombo);
+    
+        formPanel.add(new JLabel("Guide:"));
+        formPanel.add(guideHiringGuideCombo);
+    
+        formPanel.add(new JLabel("Tour Date (YYYY-MM-DD):"));
+        formPanel.add(guideHiringDateField);
+    
+        formPanel.add(new JLabel("Service Fee:"));
+        formPanel.add(guideHiringFeeField);
+    
+        formPanel.add(new JLabel("Hiring Status:"));
+        formPanel.add(guideHiringStatusCombo);
+    
+        guideHiringModel = new DefaultTableModel();
+        guideHiringModel.setColumnIdentifiers(new String[]{
+                "Guide Hire ID", "Guest ID", "Guest Name", "Guide ID", "Guide Name",
+                "Tour Date", "Service Fee", "Hiring Status"
+        });
+    
+        guideHiringTable = new JTable(guideHiringModel);
+        guideHiringTable.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+    
+        JButton loadBtn = new JButton("Load Guide Hirings");
+        JButton addBtn = new JButton("Add Hiring");
+        JButton updateBtn = new JButton("Update Hiring");
+        JButton deleteBtn = new JButton("Delete Hiring");
+        JButton clearBtn = new JButton("Clear");
+        JButton reloadRefsBtn = new JButton("Reload Guests/Guides");
+    
+        loadBtn.addActionListener(e -> loadGuideHirings());
+        addBtn.addActionListener(e -> addGuideHiring());
+        updateBtn.addActionListener(e -> updateGuideHiring());
+        deleteBtn.addActionListener(e -> deleteGuideHiring());
+        clearBtn.addActionListener(e -> clearGuideHiringFields());
+        reloadRefsBtn.addActionListener(e -> {
+            loadGuideHiringGuests();
+            loadGuideHiringGuides();
+        });
+    
+        guideHiringGuideCombo.addActionListener(e -> autofillGuideServiceFee());
+    
+        guideHiringTable.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                populateGuideHiringFieldsFromTable();
+            }
+        });
+    
+        JPanel searchPanel = new JPanel(new BorderLayout(8, 8));
+        searchPanel.add(new JLabel("Search:"), BorderLayout.WEST);
+        searchPanel.add(guideHiringSearchField, BorderLayout.CENTER);
+    
+        guideHiringSearchField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                searchGuideHirings();
+            }
+    
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                searchGuideHirings();
+            }
+    
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                searchGuideHirings();
+            }
+        });
+    
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.add(loadBtn);
+        buttonPanel.add(addBtn);
+        buttonPanel.add(updateBtn);
+        buttonPanel.add(deleteBtn);
+        buttonPanel.add(clearBtn);
+        buttonPanel.add(reloadRefsBtn);
+    
+        JPanel topPanel = new JPanel(new BorderLayout(10, 10));
+        topPanel.add(formPanel, BorderLayout.NORTH);
+        topPanel.add(searchPanel, BorderLayout.CENTER);
+        topPanel.add(buttonPanel, BorderLayout.SOUTH);
+    
+        panel.add(topPanel, BorderLayout.NORTH);
+        panel.add(new JScrollPane(guideHiringTable), BorderLayout.CENTER);
+    
+        loadGuideHiringGuests();
+        loadGuideHiringGuides();
+    
+        return panel;
+    }
+
+    private void loadGuideHiringGuests() {
+        if (conn == null) {
+            return;
+        }
+    
+        guideHiringGuestCombo.removeAllItems();
+    
+        String sql = "SELECT guest_id, first_name, last_name FROM guest ORDER BY last_name, first_name";
+    
+        try (Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+    
+            while (rs.next()) {
+                String id = String.valueOf(rs.getInt("guest_id"));
+                String label = rs.getString("last_name") + ", " + rs.getString("first_name");
+                guideHiringGuestCombo.addItem(new SelectionItem(id, label));
+            }
+    
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Error loading guests for guide hiring: " + ex.getMessage());
+        }
+    }
+
+    private void loadGuideHiringGuides() {
+        guideHiringGuideCombo.removeAllItems();
+    
+        if (conn == null) {
+            return;
+        }
+    
+        String sql = """
+            SELECT guide_id, first_name, last_name, daily_service_rate
+            FROM guide
+            ORDER BY last_name, first_name
+        """;
+    
+        try (PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+    
+            while (rs.next()) {
+                String id = String.valueOf(rs.getInt("guide_id"));
+                String label = rs.getString("last_name") + ", " + rs.getString("first_name")
+                        + " (₱" + rs.getDouble("daily_service_rate") + ")";
+                guideHiringGuideCombo.addItem(new SelectionItem(id, label));
+            }
+    
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Error loading guides: " + ex.getMessage());
+        }
+    }
+
+    private void autofillGuideServiceFee() {
+        if (conn == null) {
+            return;
+        }
+    
+        SelectionItem selectedGuide = (SelectionItem) guideHiringGuideCombo.getSelectedItem();
+        if (selectedGuide == null) {
+            return;
+        }
+    
+        String sql = "SELECT daily_service_rate FROM guide WHERE guide_id = ?";
+    
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, Integer.parseInt(selectedGuide.id));
+    
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    guideHiringFeeField.setText(rs.getString("daily_service_rate"));
+                }
+            }
+    
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Error loading guide service fee: " + ex.getMessage());
+        }
+    }
+
+    private void loadGuideHirings() {
+        if (conn == null) {
+            JOptionPane.showMessageDialog(this, "No database connection.");
+            return;
+        }
+    
+        String sql = """
+            SELECT gh.guide_hire_id,
+                   gh.guest_id,
+                   CONCAT(gs.last_name, ', ', gs.first_name) AS guest_name,
+                   gh.guide_id,
+                   CONCAT(g.last_name, ', ', g.first_name) AS guide_name,
+                   gh.tour_date,
+                   gh.service_fee,
+                   gh.hiring_status
+            FROM guide_hiring gh
+            JOIN guest gs ON gh.guest_id = gs.guest_id
+            JOIN guide g ON gh.guide_id = g.guide_id
+            ORDER BY gh.guide_hire_id
+        """;
+    
+        try (Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+    
+            guideHiringModel.setRowCount(0);
+    
+            while (rs.next()) {
+                guideHiringModel.addRow(new Object[]{
+                        rs.getInt("guide_hire_id"),
+                        rs.getInt("guest_id"),
+                        rs.getString("guest_name"),
+                        rs.getInt("guide_id"),
+                        rs.getString("guide_name"),
+                        rs.getDate("tour_date"),
+                        rs.getDouble("service_fee"),
+                        rs.getString("hiring_status")
+                });
+            }
+    
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Error loading guide hiring records: " + ex.getMessage());
+        }
+    }
+
+    private void populateGuideHiringFieldsFromTable() {
+        int row = guideHiringTable.getSelectedRow();
+        if (row == -1) {
+            return;
+        }
+    
+        guideHireIdField.setText(guideHiringModel.getValueAt(row, 0).toString());
+        String guestId = guideHiringModel.getValueAt(row, 1).toString();
+        String guideId = guideHiringModel.getValueAt(row, 3).toString();
+    
+        selectComboItemById(guideHiringGuestCombo, guestId);
+        selectComboItemById(guideHiringGuideCombo, guideId);
+    
+        guideHiringDateField.setText(guideHiringModel.getValueAt(row, 5).toString());
+        guideHiringFeeField.setText(guideHiringModel.getValueAt(row, 6).toString());
+        guideHiringStatusCombo.setSelectedItem(guideHiringModel.getValueAt(row, 7).toString());
+    }
+
+    private void selectComboItemById(JComboBox<SelectionItem> comboBox, String id) {
+        for (int i = 0; i < comboBox.getItemCount(); i++) {
+            SelectionItem item = comboBox.getItemAt(i);
+            if (item != null && item.id.equals(id)) {
+                comboBox.setSelectedIndex(i);
+                return;
+            }
+        }
+    }
+
+    private void clearGuideHiringFields() {
+        guideHireIdField.setText("");
+        guideHiringDateField.setText("");
+        guideHiringFeeField.setText("");
+        guideHiringStatusCombo.setSelectedIndex(0);
+    
+        if (guideHiringGuestCombo.getItemCount() > 0) {
+            guideHiringGuestCombo.setSelectedIndex(0);
+        }
+    
+        if (guideHiringGuideCombo.getItemCount() > 0) {
+            guideHiringGuideCombo.setSelectedIndex(0);
+        }
+    
+        guideHiringTable.clearSelection();
+    }
+
+    private boolean isGuideAvailable(int guideId, String tourDate, String currentGuideHireId) {
+        String sql = """
+            SELECT COUNT(*) AS total
+            FROM guide_hiring
+            WHERE guide_id = ?
+              AND tour_date = ?
+              AND hiring_status IN ('Pending', 'Confirmed')
+        """;
+    
+        if (currentGuideHireId != null && !currentGuideHireId.isBlank()) {
+            sql += " AND guide_hire_id <> ?";
+        }
+    
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, guideId);
+            ps.setDate(2, Date.valueOf(tourDate));
+    
+            if (currentGuideHireId != null && !currentGuideHireId.isBlank()) {
+                ps.setInt(3, Integer.parseInt(currentGuideHireId));
+            }
+    
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("total") == 0;
+                }
+            }
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Error checking guide availability: " + ex.getMessage());
+        } catch (IllegalArgumentException ex) {
+            JOptionPane.showMessageDialog(this, "Invalid date format. Use YYYY-MM-DD.");
+        }
+    
+        return false;
+    }
+
+    private void addGuideHiring() {
+        if (conn == null) {
+            JOptionPane.showMessageDialog(this, "No database connection.");
+            return;
+        }
+    
+        SelectionItem guestItem = (SelectionItem) guideHiringGuestCombo.getSelectedItem();
+        SelectionItem guideItem = (SelectionItem) guideHiringGuideCombo.getSelectedItem();
+    
+        if (guestItem == null || guideItem == null) {
+            JOptionPane.showMessageDialog(this, "Please select both a guest and a guide.");
+            return;
+        }
+    
+        String tourDate = guideHiringDateField.getText().trim();
+        String feeText = guideHiringFeeField.getText().trim();
+        String status = (String) guideHiringStatusCombo.getSelectedItem();
+    
+        if (tourDate.isEmpty() || feeText.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please fill in the tour date and service fee.");
+            return;
+        }
+    
+        double fee;
+        try {
+            fee = Double.parseDouble(feeText);
+            if (fee < 0) {
+                JOptionPane.showMessageDialog(this, "Service fee cannot be negative.");
+                return;
+            }
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Service fee must be a valid number.");
+            return;
+        }
+    
+        int guideId = Integer.parseInt(guideItem.id);
+    
+        try {
+            Date.valueOf(tourDate);
+        } catch (IllegalArgumentException ex) {
+            JOptionPane.showMessageDialog(this, "Invalid date format. Use YYYY-MM-DD.");
+            return;
+        }
+    
+        if (!"Cancelled".equals(status) && !isGuideAvailable(guideId, tourDate, null)) {
+            JOptionPane.showMessageDialog(this, "This guide is already booked on that tour date.");
+            return;
+        }
+    
+        String sql = """
+            INSERT INTO guide_hiring (guest_id, guide_id, tour_date, service_fee, hiring_status)
+            VALUES (?, ?, ?, ?, ?)
+        """;
+    
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, Integer.parseInt(guestItem.id));
+            ps.setInt(2, guideId);
+            ps.setDate(3, Date.valueOf(tourDate));
+            ps.setDouble(4, fee);
+            ps.setString(5, status);
+    
+            ps.executeUpdate();
+    
+            JOptionPane.showMessageDialog(this, "Guide hiring transaction added successfully.");
+            clearGuideHiringFields();
+            loadGuideHirings();
+    
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Error adding guide hiring transaction: " + ex.getMessage());
+        }
+    }
+
+    private void updateGuideHiring() {
+        if (conn == null) {
+            JOptionPane.showMessageDialog(this, "No database connection.");
+            return;
+        }
+    
+        String guideHireId = guideHireIdField.getText().trim();
+        if (guideHireId.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please select a guide hiring record to update.");
+            return;
+        }
+    
+        SelectionItem guestItem = (SelectionItem) guideHiringGuestCombo.getSelectedItem();
+        SelectionItem guideItem = (SelectionItem) guideHiringGuideCombo.getSelectedItem();
+    
+        if (guestItem == null || guideItem == null) {
+            JOptionPane.showMessageDialog(this, "Please select both a guest and a guide.");
+            return;
+        }
+    
+        String tourDate = guideHiringDateField.getText().trim();
+        String feeText = guideHiringFeeField.getText().trim();
+        String status = (String) guideHiringStatusCombo.getSelectedItem();
+    
+        if (tourDate.isEmpty() || feeText.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please fill in the tour date and service fee.");
+            return;
+        }
+    
+        double fee;
+        try {
+            fee = Double.parseDouble(feeText);
+            if (fee < 0) {
+                JOptionPane.showMessageDialog(this, "Service fee cannot be negative.");
+                return;
+            }
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Service fee must be a valid number.");
+            return;
+        }
+    
+        int guideId = Integer.parseInt(guideItem.id);
+    
+        try {
+            Date.valueOf(tourDate);
+        } catch (IllegalArgumentException ex) {
+            JOptionPane.showMessageDialog(this, "Invalid date format. Use YYYY-MM-DD.");
+            return;
+        }
+    
+        if (!"Cancelled".equals(status) && !isGuideAvailable(guideId, tourDate, guideHireId)) {
+            JOptionPane.showMessageDialog(this, "This guide is already booked on that tour date.");
+            return;
+        }
+    
+        String sql = """
+            UPDATE guide_hiring
+            SET guest_id = ?, guide_id = ?, tour_date = ?, service_fee = ?, hiring_status = ?
+            WHERE guide_hire_id = ?
+        """;
+    
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, Integer.parseInt(guestItem.id));
+            ps.setInt(2, guideId);
+            ps.setDate(3, Date.valueOf(tourDate));
+            ps.setDouble(4, fee);
+            ps.setString(5, status);
+            ps.setInt(6, Integer.parseInt(guideHireId));
+    
+            int updated = ps.executeUpdate();
+    
+            if (updated > 0) {
+                JOptionPane.showMessageDialog(this, "Guide hiring transaction updated successfully.");
+                clearGuideHiringFields();
+                loadGuideHirings();
+            } else {
+                JOptionPane.showMessageDialog(this, "No guide hiring record was updated.");
+            }
+    
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Error updating guide hiring transaction: " + ex.getMessage());
+        }
+    }
+
+    private void deleteGuideHiring() {
+        if (conn == null) {
+            JOptionPane.showMessageDialog(this, "No database connection.");
+            return;
+        }
+    
+        String guideHireId = guideHireIdField.getText().trim();
+        if (guideHireId.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please select a guide hiring record to delete.");
+            return;
+        }
+    
+        int confirm = JOptionPane.showConfirmDialog(
+                this,
+                "Are you sure you want to delete this guide hiring record?",
+                "Confirm Delete",
+                JOptionPane.YES_NO_OPTION
+        );
+    
+        if (confirm != JOptionPane.YES_OPTION) {
+            return;
+        }
+    
+        String sql = "DELETE FROM guide_hiring WHERE guide_hire_id = ?";
+    
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, Integer.parseInt(guideHireId));
+    
+            int deleted = ps.executeUpdate();
+    
+            if (deleted > 0) {
+                JOptionPane.showMessageDialog(this, "Guide hiring record deleted successfully.");
+                clearGuideHiringFields();
+                loadGuideHirings();
+            } else {
+                JOptionPane.showMessageDialog(this, "No guide hiring record was deleted.");
+            }
+    
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Error deleting guide hiring record: " + ex.getMessage());
+        }
+    }
+
+    private void searchGuideHirings() {
+        if (conn == null) {
+            return;
+        }
+    
+        String keyword = guideHiringSearchField.getText().trim();
+    
+        if (keyword.isEmpty()) {
+            loadGuideHirings();
+            return;
+        }
+    
+        String sql = """
+            SELECT gh.guide_hire_id,
+                   gh.guest_id,
+                   CONCAT(gs.last_name, ', ', gs.first_name) AS guest_name,
+                   gh.guide_id,
+                   CONCAT(g.last_name, ', ', g.first_name) AS guide_name,
+                   gh.tour_date,
+                   gh.service_fee,
+                   gh.hiring_status
+            FROM guide_hiring gh
+            JOIN guest gs ON gh.guest_id = gs.guest_id
+            JOIN guide g ON gh.guide_id = g.guide_id
+            WHERE CAST(gh.guide_hire_id AS CHAR) LIKE ?
+               OR CAST(gh.guest_id AS CHAR) LIKE ?
+               OR CONCAT(gs.last_name, ', ', gs.first_name) LIKE ?
+               OR CAST(gh.guide_id AS CHAR) LIKE ?
+               OR CONCAT(g.last_name, ', ', g.first_name) LIKE ?
+               OR CAST(gh.tour_date AS CHAR) LIKE ?
+               OR CAST(gh.service_fee AS CHAR) LIKE ?
+               OR gh.hiring_status LIKE ?
+            ORDER BY gh.guide_hire_id
+        """;
+    
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            String search = "%" + keyword + "%";
+    
+            for (int i = 1; i <= 8; i++) {
+                ps.setString(i, search);
+            }
+    
+            try (ResultSet rs = ps.executeQuery()) {
+                guideHiringModel.setRowCount(0);
+    
+                while (rs.next()) {
+                    guideHiringModel.addRow(new Object[]{
+                            rs.getInt("guide_hire_id"),
+                            rs.getInt("guest_id"),
+                            rs.getString("guest_name"),
+                            rs.getInt("guide_id"),
+                            rs.getString("guide_name"),
+                            rs.getDate("tour_date"),
+                            rs.getDouble("service_fee"),
+                            rs.getString("hiring_status")
+                    });
+                }
+            }
+    
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Error searching guide hiring records: " + ex.getMessage());
         }
     }
 
