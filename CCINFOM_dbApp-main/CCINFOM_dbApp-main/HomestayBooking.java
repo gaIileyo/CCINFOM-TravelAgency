@@ -101,6 +101,7 @@ public class HomestayBooking extends JFrame {
         tabs.add("Tour Packages", tourPackagePanel());
         tabs.add("Guest Management", guestPanel());
         tabs.add("Guest Transaction", transactionPanel());
+        tabs.add("Booking Transaction", bookingTransactionPanel());
         tabs.add("Booking History Report", reportPanel());
         tabs.add("Guide & Traveler Report", guideTravelerReportPanel());
         
@@ -242,7 +243,7 @@ public class HomestayBooking extends JFrame {
             model.setRowCount(0);
             while (rs.next()) {
                 model.addRow(new Object[]{
-                        rs.getInt("property_id"),
+                        rs.getString("property_id"),
                         rs.getString("property_name"),
                         rs.getString("host_name"),
                         rs.getString("room_type"),
@@ -416,7 +417,7 @@ public class HomestayBooking extends JFrame {
             model.setRowCount(0);
             while (rs.next()) {
                 model.addRow(new Object[]{
-                        rs.getInt("guide_id"),
+                        rs.getString("guide_id"),
                         rs.getString("last_name"),
                         rs.getString("first_name"),
                         rs.getString("contact_number"),
@@ -674,7 +675,7 @@ public class HomestayBooking extends JFrame {
     
                 while (rs.next()) {
                     guideModel.addRow(new Object[]{
-                            rs.getInt("guide_id"),
+                            rs.getString("guide_id"),
                             rs.getString("last_name"),
                             rs.getString("first_name"),
                             rs.getString("contact_number"),
@@ -847,7 +848,7 @@ public class HomestayBooking extends JFrame {
              ResultSet rs = st.executeQuery(sql)) {
     
             while (rs.next()) {
-                String id = String.valueOf(rs.getInt("guest_id"));
+                String id = String.valueOf(rs.getString("guest_id"));
                 String label = rs.getString("last_name") + ", " + rs.getString("first_name");
                 guideHiringGuestCombo.addItem(new SelectionItem(id, label));
             }
@@ -874,7 +875,7 @@ public class HomestayBooking extends JFrame {
              ResultSet rs = ps.executeQuery()) {
     
             while (rs.next()) {
-                String id = String.valueOf(rs.getInt("guide_id"));
+                String id = String.valueOf(rs.getString("guide_id"));
                 String label = rs.getString("last_name") + ", " + rs.getString("first_name")
                         + " (₱" + rs.getDouble("daily_service_rate") + ")";
                 guideHiringGuideCombo.addItem(new SelectionItem(id, label));
@@ -898,7 +899,7 @@ public class HomestayBooking extends JFrame {
         String sql = "SELECT daily_service_rate FROM guide WHERE guide_id = ?";
     
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, Integer.parseInt(selectedGuide.id));
+            ps.setString(1, selectedGuide.id);
     
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -940,9 +941,9 @@ public class HomestayBooking extends JFrame {
             while (rs.next()) {
                 guideHiringModel.addRow(new Object[]{
                         rs.getInt("guide_hire_id"),
-                        rs.getInt("guest_id"),
+                        rs.getString("guest_id"),
                         rs.getString("guest_name"),
-                        rs.getInt("guide_id"),
+                        rs.getString("guide_id"),
                         rs.getString("guide_name"),
                         rs.getDate("tour_date"),
                         rs.getDouble("service_fee"),
@@ -1282,9 +1283,9 @@ public class HomestayBooking extends JFrame {
                 while (rs.next()) {
                     guideHiringModel.addRow(new Object[]{
                             rs.getInt("guide_hire_id"),
-                            rs.getInt("guest_id"),
+                            rs.getString("guest_id"),
                             rs.getString("guest_name"),
-                            rs.getInt("guide_id"),
+                            rs.getString("guide_id"),
                             rs.getString("guide_name"),
                             rs.getDate("tour_date"),
                             rs.getDouble("service_fee"),
@@ -1418,7 +1419,7 @@ public class HomestayBooking extends JFrame {
     
                 while (rs.next()) {
                     inDemandGuidesModel.addRow(new Object[] {
-                            rs.getInt("guide_id"),
+                            rs.getString("guide_id"),
                             rs.getString("guide_name"),
                             rs.getString("specialization"),
                             rs.getInt("hire_count")
@@ -1455,7 +1456,7 @@ public class HomestayBooking extends JFrame {
     
                 while (rs.next()) {
                     topTravelersModel.addRow(new Object[] {
-                            rs.getInt("guest_id"),
+                            rs.getString("guest_id"),
                             rs.getString("guest_name"),
                             rs.getInt("trip_count")
                     });
@@ -2004,8 +2005,235 @@ public class HomestayBooking extends JFrame {
         return panel;
     }
 
+    // -------------------------
+// BOOKING TRANSACTION PANEL
+// -------------------------
+private JPanel bookingTransactionPanel() {
+    JPanel panel = new JPanel(new BorderLayout());
+
+    // --- Form at the top ---
+    JPanel form = new JPanel(new GridLayout(0, 2, 5, 5));
+
+    // Guest dropdown
+    JComboBox<SelectionItem> guestCombo = new JComboBox<>();
+    // Property dropdown
+    JComboBox<SelectionItem> propertyCombo = new JComboBox<>();
+    // Date fields
+    JTextField checkInField  = new JTextField("YYYY-MM-DD");
+    JTextField checkOutField = new JTextField("YYYY-MM-DD");
+    // Cost display (auto-calculated, read-only)
+    JTextField totalCostField = new JTextField();
+    totalCostField.setEditable(false);
+    // Status dropdown
+    JComboBox<String> statusCombo = new JComboBox<>(new String[]{"Confirmed", "Pending"});
+
+    form.add(new JLabel("Guest:"));           form.add(guestCombo);
+    form.add(new JLabel("Property:"));        form.add(propertyCombo);
+    form.add(new JLabel("Check-in Date:"));   form.add(checkInField);
+    form.add(new JLabel("Check-out Date:"));  form.add(checkOutField);
+    form.add(new JLabel("Total Stay Cost:")); form.add(totalCostField);
+    form.add(new JLabel("Status:"));          form.add(statusCombo);
+
+    // --- Buttons ---
+    JButton loadDropdownsBtn  = new JButton("Load Guests & Properties");
+    JButton calcCostBtn       = new JButton("Calculate Cost");
+    JButton bookBtn           = new JButton("Confirm Booking");
+    JButton loadHistoryBtn    = new JButton("Load Booking History");
+
+    // --- History table at the bottom ---
+    DefaultTableModel historyModel = new DefaultTableModel();
+    JTable historyTable = new JTable(historyModel);
+    historyModel.setColumnIdentifiers(new String[]{
+        "Booking ID", "Guest Name", "Property", "Check-in", "Check-out",
+        "Total Cost", "Status"
+    });
+
+    // Load dropdowns
+    loadDropdownsBtn.addActionListener(e -> {
+        if (conn == null) { JOptionPane.showMessageDialog(this, "No DB connection."); return; }
+        loadSelectionItems(guestCombo,
+            "SELECT guest_id AS item_id, CONCAT(first_name,' ',last_name) AS item_label FROM guest ORDER BY guest_id");
+        loadSelectionItems(propertyCombo,
+            "SELECT property_id AS item_id, property_name AS item_label FROM homestay ORDER BY property_id");
+        JOptionPane.showMessageDialog(this, "Dropdowns loaded.");
+    });
+
+    // Auto-calculate total stay cost based on dates and property price per night
+    calcCostBtn.addActionListener(e -> {
+        try {
+            SelectionItem selectedProperty = (SelectionItem) propertyCombo.getSelectedItem();
+            if (selectedProperty == null) {
+                JOptionPane.showMessageDialog(this, "Please select a property first.");
+                return;
+            }
+            Date checkIn  = Date.valueOf(checkInField.getText().trim());
+            Date checkOut = Date.valueOf(checkOutField.getText().trim());
+
+            if (!checkOut.after(checkIn)) {
+                JOptionPane.showMessageDialog(this, "Check-out date must be after check-in date.");
+                return;
+            }
+
+            long nights = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24);
+            double pricePerNight = getPriceById("homestay", "property_id", "price_per_night", selectedProperty.id);
+            double total = nights * pricePerNight;
+            totalCostField.setText(String.format("%.2f", total));
+        } catch (IllegalArgumentException ex) {
+            JOptionPane.showMessageDialog(this, "Invalid date format. Use YYYY-MM-DD.");
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Error calculating cost: " + ex.getMessage());
+        }
+    });
+
+    // Confirm booking — runs all spec validations before inserting
+    bookBtn.addActionListener(e -> {
+        if (conn == null) { JOptionPane.showMessageDialog(this, "No DB connection."); return; }
+
+        SelectionItem selectedGuest    = (SelectionItem) guestCombo.getSelectedItem();
+        SelectionItem selectedProperty = (SelectionItem) propertyCombo.getSelectedItem();
+
+        if (selectedGuest == null || selectedProperty == null) {
+            JOptionPane.showMessageDialog(this, "Please select a guest and property.");
+            return;
+        }
+        if (totalCostField.getText().trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please calculate the total cost first.");
+            return;
+        }
+
+        try {
+            Date checkIn  = Date.valueOf(checkInField.getText().trim());
+            Date checkOut = Date.valueOf(checkOutField.getText().trim());
+
+            if (!checkOut.after(checkIn)) {
+                JOptionPane.showMessageDialog(this, "Check-out date must be after check-in date.");
+                return;
+            }
+
+            // SERVICE 1: Guest Trust Validation — block if trust rating is 1.0 (blacklisted threshold)
+            String trustSQL = "SELECT trust_rating, valid_id_status FROM guest WHERE guest_id = ?";
+            try (PreparedStatement ps = conn.prepareStatement(trustSQL)) {
+                ps.setString(1, selectedGuest.id);
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) {
+                    double trustRating = rs.getDouble("trust_rating");
+                    String idStatus    = rs.getString("valid_id_status");
+                    if (trustRating <= 1.0) {
+                        JOptionPane.showMessageDialog(this,
+                            "Booking denied. Guest has a trust rating of " + trustRating + " and is blacklisted.");
+                        return;
+                    }
+                    if ("Not Verified".equals(idStatus)) {
+                        int confirm = JOptionPane.showConfirmDialog(this,
+                            "Warning: Guest ID is Not Verified. Proceed anyway?",
+                            "ID Verification Warning", JOptionPane.YES_NO_OPTION);
+                        if (confirm != JOptionPane.YES_OPTION) return;
+                    }
+                }
+            }
+
+            // SERVICE 2: Property Availability Check
+            String availSQL = "SELECT availability_status, price_per_night FROM homestay WHERE property_id = ?";
+            try (PreparedStatement ps = conn.prepareStatement(availSQL)) {
+                ps.setString(1, selectedProperty.id);
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) {
+                    String status = rs.getString("availability_status");
+                    if ("Booked".equals(status)) {
+                        JOptionPane.showMessageDialog(this,
+                            "Property is currently Booked and not available.");
+                        return;
+                    }
+                }
+            }
+
+            double totalCost = Double.parseDouble(totalCostField.getText().trim());
+            String bookingStatus = statusCombo.getSelectedItem().toString();
+
+            // SERVICE 3: Booking Finalization — insert booking record
+            String insertSQL = "INSERT INTO booking_transaction " +
+                "(guest_id, property_id, check_in_date, check_out_date, total_stay_cost, status) " +
+                "VALUES (?, ?, ?, ?, ?, ?)";
+            try (PreparedStatement ps = conn.prepareStatement(insertSQL)) {
+                ps.setInt(1, Integer.parseInt(selectedGuest.id));
+                ps.setInt(2, Integer.parseInt(selectedProperty.id));
+                ps.setDate(3, checkIn);
+                ps.setDate(4, checkOut);
+                ps.setDouble(5, totalCost);
+                ps.setString(6, bookingStatus);
+                ps.executeUpdate();
+            }
+
+            // Update property status to Booked if confirmed
+            if ("Confirmed".equals(bookingStatus)) {
+                String updateSQL = "UPDATE homestay SET availability_status = 'Booked' WHERE property_id = ?";
+                try (PreparedStatement ps = conn.prepareStatement(updateSQL)) {
+                    ps.setString(1, selectedProperty.id);
+                    ps.executeUpdate();
+                }
+            }
+
+            JOptionPane.showMessageDialog(this, "Booking confirmed successfully!");
+            loadBookingHistory(historyModel);
+
+        } catch (IllegalArgumentException ex) {
+            JOptionPane.showMessageDialog(this, "Invalid date format. Use YYYY-MM-DD.");
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Error processing booking:\n" + ex.getMessage());
+        }
+    });
+
+    // Load booking history into table
+    loadHistoryBtn.addActionListener(e -> loadBookingHistory(historyModel));
+
+    // Button row
+    JPanel buttons = new JPanel();
+    buttons.add(loadDropdownsBtn);
+    buttons.add(calcCostBtn);
+    buttons.add(bookBtn);
+    buttons.add(loadHistoryBtn);
+
+    JPanel top = new JPanel(new BorderLayout());
+    top.add(form, BorderLayout.CENTER);
+    top.add(buttons, BorderLayout.SOUTH);
+
+    panel.add(top, BorderLayout.NORTH);
+    panel.add(new JScrollPane(historyTable), BorderLayout.CENTER);
+    return panel;
+}
+
+private void loadBookingHistory(DefaultTableModel model) {
+    model.setRowCount(0);
+    if (conn == null) return;
+
+    String sql = "SELECT bt.booking_id, " +
+        "CONCAT(g.first_name, ' ', g.last_name) AS guest_name, " +
+        "h.property_name, bt.check_in_date, bt.check_out_date, " +
+        "bt.total_stay_cost, bt.status " +
+        "FROM booking_transaction bt " +
+        "JOIN guest g ON g.guest_id = bt.guest_id " +
+        "JOIN homestay h ON h.property_id = bt.property_id " +
+        "ORDER BY bt.check_in_date DESC, bt.booking_id DESC";
+
+    try (Statement st = conn.createStatement();
+         ResultSet rs = st.executeQuery(sql)) {
+        while (rs.next()) {
+            model.addRow(new Object[]{
+                rs.getInt("booking_id"),
+                rs.getString("guest_name"),
+                rs.getString("property_name"),
+                rs.getDate("check_in_date"),
+                rs.getDate("check_out_date"),
+                rs.getDouble("total_stay_cost"),
+                rs.getString("status")
+            });
+        }
+    } catch (Exception ex) {
+        JOptionPane.showMessageDialog(this, "Error loading booking history: " + ex.getMessage());
+    }
+}
+
     public static void main(String[] args) {
         SwingUtilities.invokeLater(HomestayBooking::new);
     }
 }
-
