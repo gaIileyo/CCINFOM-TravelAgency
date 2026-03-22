@@ -47,7 +47,7 @@ public class HomestayBooking extends JFrame {
     private static final String DEFAULT_DB_HOST = "localhost";
     private static final String DEFAULT_DB_PORT = "3306";
     private static final String DEFAULT_DB_USER = "root";
-    private static final String DEFAULT_DB_PASSWORD = "Minions230319!";
+    private static final String DEFAULT_DB_PASSWORD = "";
     private static final String MYSQL_DRIVER_CLASS = "com.mysql.cj.jdbc.Driver";
 
     private JTable guideTable;
