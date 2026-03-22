@@ -76,6 +76,14 @@ public class HomestayBooking extends JFrame {
     private JComboBox<SelectionItem> guideHiringGuideCombo;
     private JComboBox<String> guideHiringStatusCombo;
 
+    private JComboBox<String> reportMonthCombo;
+    private JTextField reportYearField;
+
+    private JTable inDemandGuidesTable;
+    private DefaultTableModel inDemandGuidesModel;
+    private JTable topTravelersTable;
+    private DefaultTableModel topTravelersModel;
+
     public HomestayBooking() {
         connectDatabase();
 
@@ -94,6 +102,7 @@ public class HomestayBooking extends JFrame {
         tabs.add("Guest Management", guestPanel());
         tabs.add("Guest Transaction", transactionPanel());
         tabs.add("Booking History Report", reportPanel());
+        tabs.add("Guide & Traveler Report", guideTravelerReportPanel());
         
 
         add(tabs);
@@ -1289,6 +1298,175 @@ public class HomestayBooking extends JFrame {
         }
     }
 
+    private JPanel guideTravelerReportPanel() {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+    
+        JPanel filterPanel = new JPanel(new GridLayout(1, 5, 8, 8));
+    
+        reportMonthCombo = new JComboBox<>(new String[] {
+                "1", "2", "3", "4", "5", "6",
+                "7", "8", "9", "10", "11", "12"
+        });
+    
+        reportYearField = new JTextField();
+    
+        JButton generateBtn = new JButton("Generate Report");
+    
+        filterPanel.add(new JLabel("Month:"));
+        filterPanel.add(reportMonthCombo);
+        filterPanel.add(new JLabel("Year:"));
+        filterPanel.add(reportYearField);
+        filterPanel.add(generateBtn);
+    
+        inDemandGuidesModel = new DefaultTableModel();
+        inDemandGuidesModel.setColumnIdentifiers(new String[] {
+                "Guide ID", "Guide Name", "Specialization", "Hire Count"
+        });
+    
+        inDemandGuidesTable = new JTable(inDemandGuidesModel);
+    
+        topTravelersModel = new DefaultTableModel();
+        topTravelersModel.setColumnIdentifiers(new String[] {
+                "Guest ID", "Guest Name", "Trip Count"
+        });
+    
+        topTravelersTable = new JTable(topTravelersModel);
+    
+        JPanel tablesPanel = new JPanel(new GridLayout(2, 1, 10, 10));
+    
+        JPanel guidePanel = new JPanel(new BorderLayout());
+        guidePanel.add(new JLabel("In-Demand Guides"), BorderLayout.NORTH);
+        guidePanel.add(new JScrollPane(inDemandGuidesTable), BorderLayout.CENTER);
+    
+        JPanel travelerPanel = new JPanel(new BorderLayout());
+        travelerPanel.add(new JLabel("Top Travelers"), BorderLayout.NORTH);
+        travelerPanel.add(new JScrollPane(topTravelersTable), BorderLayout.CENTER);
+    
+        tablesPanel.add(guidePanel);
+        tablesPanel.add(travelerPanel);
+    
+        generateBtn.addActionListener(e -> generateGuideTravelerReport());
+    
+        panel.add(filterPanel, BorderLayout.NORTH);
+        panel.add(tablesPanel, BorderLayout.CENTER);
+    
+        return panel;
+    }
+    
+    private void generateGuideTravelerReport() {
+        if (conn == null) {
+            JOptionPane.showMessageDialog(this, "No database connection.");
+            return;
+        }
+    
+        String monthText = (String) reportMonthCombo.getSelectedItem();
+        String yearText = reportYearField.getText().trim();
+    
+        if (monthText == null || yearText.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please enter both month and year.");
+            return;
+        }
+    
+        int month;
+        int year;
+    
+        try {
+            month = Integer.parseInt(monthText);
+            year = Integer.parseInt(yearText);
+    
+            if (month < 1 || month > 12) {
+                JOptionPane.showMessageDialog(this, "Month must be between 1 and 12.");
+                return;
+            }
+    
+            if (year < 2000 || year > 2100) {
+                JOptionPane.showMessageDialog(this, "Please enter a valid year.");
+                return;
+            }
+    
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Month and year must be valid numbers.");
+            return;
+        }
+    
+        loadInDemandGuidesReport(month, year);
+        loadTopTravelersReport(month, year);
+    }
+
+    private void loadInDemandGuidesReport(int month, int year) {
+        String sql = """
+            SELECT
+                g.guide_id,
+                CONCAT(g.last_name, ', ', g.first_name) AS guide_name,
+                g.specialization,
+                COUNT(*) AS hire_count
+            FROM guide_hiring gh
+            JOIN guide g ON gh.guide_id = g.guide_id
+            WHERE MONTH(gh.tour_date) = ?
+              AND YEAR(gh.tour_date) = ?
+              AND gh.hiring_status = 'Confirmed'
+            GROUP BY g.guide_id, g.last_name, g.first_name, g.specialization
+            ORDER BY hire_count DESC, guide_name ASC
+        """;
+    
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, month);
+            ps.setInt(2, year);
+    
+            try (ResultSet rs = ps.executeQuery()) {
+                inDemandGuidesModel.setRowCount(0);
+    
+                while (rs.next()) {
+                    inDemandGuidesModel.addRow(new Object[] {
+                            rs.getInt("guide_id"),
+                            rs.getString("guide_name"),
+                            rs.getString("specialization"),
+                            rs.getInt("hire_count")
+                    });
+                }
+            }
+    
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Error loading in-demand guides report: " + ex.getMessage());
+        }
+    }
+
+    private void loadTopTravelersReport(int month, int year) {
+        String sql = """
+            SELECT
+                gs.guest_id,
+                CONCAT(gs.last_name, ', ', gs.first_name) AS guest_name,
+                COUNT(*) AS trip_count
+            FROM guide_hiring gh
+            JOIN guest gs ON gh.guest_id = gs.guest_id
+            WHERE MONTH(gh.tour_date) = ?
+              AND YEAR(gh.tour_date) = ?
+              AND gh.hiring_status = 'Confirmed'
+            GROUP BY gs.guest_id, gs.last_name, gs.first_name
+            ORDER BY trip_count DESC, guest_name ASC
+        """;
+    
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, month);
+            ps.setInt(2, year);
+    
+            try (ResultSet rs = ps.executeQuery()) {
+                topTravelersModel.setRowCount(0);
+    
+                while (rs.next()) {
+                    topTravelersModel.addRow(new Object[] {
+                            rs.getInt("guest_id"),
+                            rs.getString("guest_name"),
+                            rs.getInt("trip_count")
+                    });
+                }
+            }
+    
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Error loading top travelers report: " + ex.getMessage());
+        }
+    }
+
     private JPanel tourPackagePanel() {
         JPanel panel = new JPanel(new BorderLayout());
         DefaultTableModel model = new DefaultTableModel();
@@ -1830,8 +2008,4 @@ public class HomestayBooking extends JFrame {
         SwingUtilities.invokeLater(HomestayBooking::new);
     }
 }
-
-
-
-
 
