@@ -50,6 +50,20 @@ public class HomestayBooking extends JFrame {
     private static final String DEFAULT_DB_PASSWORD = "";
     private static final String MYSQL_DRIVER_CLASS = "com.mysql.cj.jdbc.Driver";
 
+    private JTable guideTable;
+    private DefaultTableModel guideModel;
+
+    private JTextField guideIdField;
+    private JTextField guideLastNameField;
+    private JTextField guideFirstNameField;
+    private JTextField guideContactField;
+    private JTextField guideLanguagesField;
+    private JTextField guideDailyRateField;
+    private JTextField guideDotField;
+    private JTextField guideSearchField;
+
+    private JComboBox<String> guideSpecializationCombo;
+
     public HomestayBooking() {
         connectDatabase();
 
@@ -82,11 +96,13 @@ public class HomestayBooking extends JFrame {
                 + "?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true";
 
         try {
+            System.out.println("Trying DB connection to: " + jdbcUrl + " as user " + dbUser);
             Class.forName(MYSQL_DRIVER_CLASS);
             conn = DriverManager.getConnection(jdbcUrl, dbUser, dbPassword);
             System.out.println("Database connected successfully at " + dbHost + ":" + dbPort + "/" + dbName + ".");
         } catch (SQLException e) {
             conn = null;
+            e.printStackTrace();
             JOptionPane.showMessageDialog(this,
                     "Database connection failed:\n" + e.getMessage() +
                             "\n\nCurrent DB settings:" +
@@ -253,30 +269,116 @@ public class HomestayBooking extends JFrame {
 
 
     private JPanel guidePanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-        DefaultTableModel model = new DefaultTableModel();
-        JTable table = new JTable(model);
-
-        model.setColumnIdentifiers(new String[]{
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+    
+        JPanel formPanel = new JPanel(new GridLayout(9, 2, 8, 8));
+    
+        guideIdField = new JTextField();
+        guideIdField.setEditable(false);
+    
+        guideLastNameField = new JTextField();
+        guideFirstNameField = new JTextField();
+        guideContactField = new JTextField();
+        guideLanguagesField = new JTextField();
+        guideDailyRateField = new JTextField();
+        guideDotField = new JTextField();
+        guideSearchField = new JTextField();
+    
+        guideSpecializationCombo = new JComboBox<>(new String[]{
+                "City Tour", "Heritage", "Food"
+        });
+    
+        formPanel.add(new JLabel("Guide ID:"));
+        formPanel.add(guideIdField);
+    
+        formPanel.add(new JLabel("Last Name:"));
+        formPanel.add(guideLastNameField);
+    
+        formPanel.add(new JLabel("First Name:"));
+        formPanel.add(guideFirstNameField);
+    
+        formPanel.add(new JLabel("Contact Number:"));
+        formPanel.add(guideContactField);
+    
+        formPanel.add(new JLabel("Specialization:"));
+        formPanel.add(guideSpecializationCombo);
+    
+        formPanel.add(new JLabel("Languages Spoken:"));
+        formPanel.add(guideLanguagesField);
+    
+        formPanel.add(new JLabel("Daily Service Rate:"));
+        formPanel.add(guideDailyRateField);
+    
+        formPanel.add(new JLabel("DOT Accreditation No.:"));
+        formPanel.add(guideDotField);
+    
+        formPanel.add(new JLabel("Search:"));
+        formPanel.add(guideSearchField);
+    
+        guideModel = new DefaultTableModel();
+        guideModel.setColumnIdentifiers(new String[]{
                 "Guide ID", "Last Name", "First Name", "Contact", "Specialization",
                 "Languages", "Daily Rate", "DOT Accreditation"
         });
-
+    
+        guideTable = new JTable(guideModel);
+        guideTable.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+    
         JButton loadBtn = new JButton("Load Guides");
         JButton seedBtn = new JButton("Add Sample Guides");
-
-        loadBtn.addActionListener(e -> loadGuides(model));
+        JButton addBtn = new JButton("Add Guide");
+        JButton updateBtn = new JButton("Update Guide");
+        JButton deleteBtn = new JButton("Delete Guide");
+        JButton clearBtn = new JButton("Clear");
+    
+        loadBtn.addActionListener(e -> loadGuides(guideModel));
         seedBtn.addActionListener(e -> {
             insertSampleGuides();
-            loadGuides(model);
+            loadGuides(guideModel);
         });
-
-        JPanel actions = new JPanel();
-        actions.add(loadBtn);
-        actions.add(seedBtn);
-
-        panel.add(new JScrollPane(table), BorderLayout.CENTER);
-        panel.add(actions, BorderLayout.SOUTH);
+        addBtn.addActionListener(e -> addGuide());
+        updateBtn.addActionListener(e -> updateGuide());
+        deleteBtn.addActionListener(e -> deleteGuide());
+        clearBtn.addActionListener(e -> clearGuideFields());
+    
+        guideTable.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                populateGuideFieldsFromTable();
+            }
+        });
+    
+        guideSearchField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                searchGuides();
+            }
+    
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                searchGuides();
+            }
+    
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                searchGuides();
+            }
+        });
+    
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.add(loadBtn);
+        buttonPanel.add(seedBtn);
+        buttonPanel.add(addBtn);
+        buttonPanel.add(updateBtn);
+        buttonPanel.add(deleteBtn);
+        buttonPanel.add(clearBtn);
+    
+        JPanel topPanel = new JPanel(new BorderLayout(10, 10));
+        topPanel.add(formPanel, BorderLayout.CENTER);
+        topPanel.add(buttonPanel, BorderLayout.SOUTH);
+    
+        panel.add(topPanel, BorderLayout.NORTH);
+        panel.add(new JScrollPane(guideTable), BorderLayout.CENTER);
+    
         return panel;
     }
 
@@ -306,6 +408,263 @@ public class HomestayBooking extends JFrame {
             }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Error loading guides: " + ex.getMessage());
+        }
+    }
+
+    private void populateGuideFieldsFromTable() {
+        int row = guideTable.getSelectedRow();
+        if (row == -1) {
+            return;
+        }
+    
+        guideIdField.setText(guideModel.getValueAt(row, 0).toString());
+        guideLastNameField.setText(guideModel.getValueAt(row, 1).toString());
+        guideFirstNameField.setText(guideModel.getValueAt(row, 2).toString());
+        guideContactField.setText(guideModel.getValueAt(row, 3).toString());
+        guideSpecializationCombo.setSelectedItem(guideModel.getValueAt(row, 4).toString());
+        guideLanguagesField.setText(guideModel.getValueAt(row, 5) == null ? "" : guideModel.getValueAt(row, 5).toString());
+        guideDailyRateField.setText(guideModel.getValueAt(row, 6).toString());
+        guideDotField.setText(guideModel.getValueAt(row, 7).toString());
+    }
+
+    private void clearGuideFields() {
+        guideIdField.setText("");
+        guideLastNameField.setText("");
+        guideFirstNameField.setText("");
+        guideContactField.setText("");
+        guideSpecializationCombo.setSelectedIndex(0);
+        guideLanguagesField.setText("");
+        guideDailyRateField.setText("");
+        guideDotField.setText("");
+        guideTable.clearSelection();
+    }
+
+    private void addGuide() {
+        if (conn == null) {
+            JOptionPane.showMessageDialog(this, "No database connection.");
+            return;
+        }
+    
+        String lastName = guideLastNameField.getText().trim();
+        String firstName = guideFirstNameField.getText().trim();
+        String contact = guideContactField.getText().trim();
+        String specialization = (String) guideSpecializationCombo.getSelectedItem();
+        String languages = guideLanguagesField.getText().trim();
+        String rateText = guideDailyRateField.getText().trim();
+        String dot = guideDotField.getText().trim();
+    
+        if (lastName.isEmpty() || firstName.isEmpty() || contact.isEmpty() || rateText.isEmpty() || dot.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please fill in all required guide fields.");
+            return;
+        }
+    
+        double rate;
+        try {
+            rate = Double.parseDouble(rateText);
+            if (rate < 0) {
+                JOptionPane.showMessageDialog(this, "Daily service rate cannot be negative.");
+                return;
+            }
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Daily service rate must be a valid number.");
+            return;
+        }
+    
+        String sql = """
+            INSERT INTO guide
+            (last_name, first_name, contact_number, specialization, languages_spoken, daily_service_rate, dot_accreditation_number)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """;
+    
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, lastName);
+            ps.setString(2, firstName);
+            ps.setString(3, contact);
+            ps.setString(4, specialization);
+            ps.setString(5, languages);
+            ps.setDouble(6, rate);
+            ps.setString(7, dot);
+    
+            ps.executeUpdate();
+    
+            JOptionPane.showMessageDialog(this, "Guide added successfully.");
+            clearGuideFields();
+            loadGuides(guideModel);
+    
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Error adding guide: " + ex.getMessage());
+        }
+    }
+
+    private void updateGuide() {
+        if (conn == null) {
+            JOptionPane.showMessageDialog(this, "No database connection.");
+            return;
+        }
+    
+        String idText = guideIdField.getText().trim();
+        if (idText.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please select a guide to update.");
+            return;
+        }
+    
+        String lastName = guideLastNameField.getText().trim();
+        String firstName = guideFirstNameField.getText().trim();
+        String contact = guideContactField.getText().trim();
+        String specialization = (String) guideSpecializationCombo.getSelectedItem();
+        String languages = guideLanguagesField.getText().trim();
+        String rateText = guideDailyRateField.getText().trim();
+        String dot = guideDotField.getText().trim();
+    
+        if (lastName.isEmpty() || firstName.isEmpty() || contact.isEmpty() || rateText.isEmpty() || dot.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please fill in all required guide fields.");
+            return;
+        }
+    
+        double rate;
+        try {
+            rate = Double.parseDouble(rateText);
+            if (rate < 0) {
+                JOptionPane.showMessageDialog(this, "Daily service rate cannot be negative.");
+                return;
+            }
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Daily service rate must be a valid number.");
+            return;
+        }
+    
+        String sql = """
+            UPDATE guide
+            SET last_name = ?, first_name = ?, contact_number = ?, specialization = ?,
+                languages_spoken = ?, daily_service_rate = ?, dot_accreditation_number = ?
+            WHERE guide_id = ?
+        """;
+    
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, lastName);
+            ps.setString(2, firstName);
+            ps.setString(3, contact);
+            ps.setString(4, specialization);
+            ps.setString(5, languages);
+            ps.setDouble(6, rate);
+            ps.setString(7, dot);
+            ps.setInt(8, Integer.parseInt(idText));
+    
+            int updated = ps.executeUpdate();
+    
+            if (updated > 0) {
+                JOptionPane.showMessageDialog(this, "Guide updated successfully.");
+                clearGuideFields();
+                loadGuides(guideModel);
+            } else {
+                JOptionPane.showMessageDialog(this, "No guide record was updated.");
+            }
+    
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Error updating guide: " + ex.getMessage());
+        }
+    }
+
+    private void deleteGuide() {
+        if (conn == null) {
+            JOptionPane.showMessageDialog(this, "No database connection.");
+            return;
+        }
+    
+        String idText = guideIdField.getText().trim();
+        if (idText.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please select a guide to delete.");
+            return;
+        }
+    
+        int confirm = JOptionPane.showConfirmDialog(
+                this,
+                "Are you sure you want to delete this guide?",
+                "Confirm Delete",
+                JOptionPane.YES_NO_OPTION
+        );
+    
+        if (confirm != JOptionPane.YES_OPTION) {
+            return;
+        }
+    
+        String sql = "DELETE FROM guide WHERE guide_id = ?";
+    
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, Integer.parseInt(idText));
+    
+            int deleted = ps.executeUpdate();
+    
+            if (deleted > 0) {
+                JOptionPane.showMessageDialog(this, "Guide deleted successfully.");
+                clearGuideFields();
+                loadGuides(guideModel);
+            } else {
+                JOptionPane.showMessageDialog(this, "No guide record was deleted.");
+            }
+    
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Error deleting guide: " + ex.getMessage());
+        }
+    }
+
+    private void searchGuides() {
+        if (conn == null) {
+            JOptionPane.showMessageDialog(this, "No database connection.");
+            return;
+        }
+    
+        String keyword = guideSearchField.getText().trim();
+    
+        if (keyword.isEmpty()) {
+            loadGuides(guideModel);
+            return;
+        }
+    
+        String sql = """
+            SELECT * FROM guide
+            WHERE CAST(guide_id AS CHAR) LIKE ?
+               OR last_name LIKE ?
+               OR first_name LIKE ?
+               OR contact_number LIKE ?
+               OR specialization LIKE ?
+               OR languages_spoken LIKE ?
+               OR CAST(daily_service_rate AS CHAR) LIKE ?
+               OR dot_accreditation_number LIKE ?
+            ORDER BY guide_id
+        """;
+    
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            String searchText = "%" + keyword + "%";
+    
+            ps.setString(1, searchText);
+            ps.setString(2, searchText);
+            ps.setString(3, searchText);
+            ps.setString(4, searchText);
+            ps.setString(5, searchText);
+            ps.setString(6, searchText);
+            ps.setString(7, searchText);
+            ps.setString(8, searchText);
+    
+            try (ResultSet rs = ps.executeQuery()) {
+                guideModel.setRowCount(0);
+    
+                while (rs.next()) {
+                    guideModel.addRow(new Object[]{
+                            rs.getInt("guide_id"),
+                            rs.getString("last_name"),
+                            rs.getString("first_name"),
+                            rs.getString("contact_number"),
+                            rs.getString("specialization"),
+                            rs.getString("languages_spoken"),
+                            rs.getDouble("daily_service_rate"),
+                            rs.getString("dot_accreditation_number")
+                    });
+                }
+            }
+    
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Error searching guides: " + ex.getMessage());
         }
     }
 
