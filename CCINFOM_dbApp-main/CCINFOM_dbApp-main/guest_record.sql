@@ -19,9 +19,13 @@ CREATE TABLE homestay (
     property_id VARCHAR(2) PRIMARY KEY,
     property_name VARCHAR(100) NOT NULL,
     host_name VARCHAR(100) NOT NULL,
+    room_type ENUM('Solo','Family') NOT NULL DEFAULT 'Solo',
     address VARCHAR(150) NOT NULL,
-    price_per_night DECIMAL(10,2) NOT NULL
-);
+    room_capacity INT NOT NULL DEFAULT 1,
+    price_per_night DECIMAL(10,2) NOT NULL,
+    amenities TEXT,
+    availability_status ENUM('Available','Booked') DEFAULT 'Available'
+);  
 
 -- Guides Table
 CREATE TABLE guide (
@@ -65,6 +69,19 @@ CREATE TABLE guest_activity_transaction (
     FOREIGN KEY (guide_id) REFERENCES guide(guide_id)
 );
 
+-- Booking Transaction Table
+CREATE TABLE booking_transaction (
+    booking_id INT AUTO_INCREMENT PRIMARY KEY,
+    guest_id VARCHAR(2) NOT NULL,
+    property_id VARCHAR(2) NOT NULL,
+    check_in_date DATE NOT NULL,
+    check_out_date DATE NOT NULL,
+    total_stay_cost DECIMAL(10,2) NOT NULL,
+    status ENUM('Confirmed','Pending') NOT NULL,
+    FOREIGN KEY (guest_id) REFERENCES guest(guest_id) ON DELETE CASCADE,
+    FOREIGN KEY (property_id) REFERENCES homestay(property_id) ON DELETE RESTRICT
+);
+
 -- Trigger to calculate final amount automatically
 DELIMITER $$
 CREATE TRIGGER trg_calculate_final_amount
@@ -92,19 +109,20 @@ INSERT INTO guest VALUES
 ('H4','Miguel','Santos','Cagayan de Oro, Philippines','+63-917-222-0003','miguel.santos@yahoo.com','Verified',4.7),
 ('H5','Chloe','Anderson','Vancouver, Canada','+1-604-555-8899','chloe.anderson@icloud.com','Not Verified',3.6),
 ('H6','Rafael','Morales','Madrid, Spain','+34-612-345-678','rafael.morales@travelmail.es','Verified',4.8);
+('T1','Test','Blacklisted','Manila, Philippines','+63-000-000-0000','test.blacklisted@gmail.com','Not Verified',1.0);
 
 -- Insert Homestays
 INSERT INTO homestay VALUES
-('P1','Sea Breeze Villa','Carlos Dela Cruz','Palawan, Philippines',2000),
-('P2','Mountain View Cabin','Anna Reyes','Baguio, Philippines',1500),
-('P3','City Stay Inn','Mark Tan','Manila, Philippines',1800),
-('P4','Island Retreat','Liza Santos','Cebu, Philippines',2500),
-('P5','Lake House','Pedro Cruz','Laguna, Philippines',1700),
-('P6','Forest Lodge','Maria Lim','Davao, Philippines',1600),
-('P7','Sunset Resort','John Lee','Boracay, Philippines',3000),
-('P8','Hilltop Haven','Grace Yu','Tagaytay, Philippines',2200),
-('P9','Urban Suites','Paul Ong','Quezon City, Philippines',1900),
-('Q1','Coastal Escape','Nina Cruz','La Union, Philippines',2100);
+('P1','Sea Breeze Villa','Carlos Dela Cruz','Solo','Palawan, Philippines',4,2000,'Beach access, WiFi','Available'),
+('P2','Mountain View Cabin','Anna Reyes','Solo','Baguio, Philippines',2,1500,'Heater, Breakfast','Available'),
+('P3','City Stay Inn','Mark Tan','Family','Manila, Philippines',6,1800,'WiFi, AC, Parking','Available'),
+('P4','Island Retreat','Liza Santos','Family','Cebu, Philippines',8,2500,'Pool, Kitchen','Available'),
+('P5','Lake House','Pedro Cruz','Solo','Laguna, Philippines',2,1700,'WiFi, Breakfast','Available'),
+('P6','Forest Lodge','Maria Lim','Family','Davao, Philippines',5,1600,'WiFi, Garden','Available'),
+('P7','Sunset Resort','John Lee','Family','Boracay, Philippines',10,3000,'Pool, Beach, Bar','Available'),
+('P8','Hilltop Haven','Grace Yu','Solo','Tagaytay, Philippines',2,2200,'WiFi, Fireplace','Available'),
+('P9','Urban Suites','Paul Ong','Solo','Quezon City, Philippines',2,1900,'WiFi, AC','Available'),
+('Q1','Coastal Escape','Nina Cruz','Family','La Union, Philippines',6,2100,'Beach, WiFi','Available');
 
 -- Insert Guides
 INSERT INTO guide VALUES
