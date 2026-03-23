@@ -2233,78 +2233,7 @@ private void loadBookingHistory(DefaultTableModel model) {
     }
 }
 
-     private JPanel tourPackagePanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-        DefaultTableModel model = new DefaultTableModel();
-        JTable table = new JTable(model);
-        model.setColumnIdentifiers(new String[]{"Package ID", "Package Name", "Category", "Duration", "Price", "Max Guests", "Inclusions"});
 
-        JButton loadBtn = new JButton("Load Tour Packages");
-        JButton seedBtn = new JButton("Add Sample Tour Packages");
-        JButton viewBtn = new JButton("View Package Details");
-
-        loadBtn.addActionListener((e) -> this.loadTourPackages(model));
-        seedBtn.addActionListener((e) -> {
-            this.insertSampleTourPackages();
-            this.loadTourPackages(model);
-        });
-        viewBtn.addActionListener((e) -> this.viewPackageDetails(table, model));
-
-        JPanel actions = new JPanel();
-        actions.add(loadBtn);
-        actions.add(seedBtn);
-        actions.add(viewBtn);
-
-        panel.add(new JScrollPane(table), BorderLayout.CENTER);
-        panel.add(actions, BorderLayout.SOUTH);
-        return panel;
-    }
-
-    private void loadTourPackages(DefaultTableModel model) {
-        if (this.conn == null) {
-            JOptionPane.showMessageDialog(this, "No database connection.");
-            return;
-        }
-        try (Statement st = this.conn.createStatement();
-             ResultSet rs = st.executeQuery("SELECT * FROM tour_package ORDER BY package_id")) {
-            model.setRowCount(0);
-            while(rs.next()) {
-                model.addRow(new Object[]{
-                        rs.getInt("package_id"),
-                        rs.getString("package_name"),
-                        rs.getString("category"),
-                        rs.getString("duration"),
-                        rs.getDouble("price"),
-                        rs.getInt("max_guests"),
-                        rs.getString("inclusions")
-                });
-            }
-            if (model.getRowCount() == 0) {
-                JOptionPane.showMessageDialog(this, "No tour packages found. Click 'Add Sample Tour Packages'.");
-            }
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error loading tour packages: " + e.getMessage());
-        }
-    }
-
-    private void insertSampleTourPackages() {
-        if (this.conn == null) {
-            JOptionPane.showMessageDialog(this, "No database connection.");
-            return;
-        }
-        String[] inserts = new String[]{
-                "INSERT INTO tour_package (package_name, category, duration, price, max_guests, inclusions) SELECT 'Intramuros City Highlights','City Tour','1 Day',1800.00,20,'Transport, guide, lunch' WHERE NOT EXISTS (SELECT 1 FROM tour_package WHERE package_name='Intramuros City Highlights')",
-                "INSERT INTO tour_package (package_name, category, duration, price, max_guests, inclusions) SELECT 'Manila Heritage Walk','Heritage','Half Day',1200.00,15,'Licensed guide, museum entry, bottled water' WHERE NOT EXISTS (SELECT 1 FROM tour_package WHERE package_name='Manila Heritage Walk')",
-                "INSERT INTO tour_package (package_name, category, duration, price, max_guests, inclusions) SELECT 'Binondo Food Adventure','Food','Evening',1500.00,12,'Food tastings, guide, local maps' WHERE NOT EXISTS (SELECT 1 FROM tour_package WHERE package_name='Binondo Food Adventure')"
-        };
-        try (Statement st = this.conn.createStatement()) {
-            int count = 0;
-            for(String query : inserts) count += st.executeUpdate(query);
-            JOptionPane.showMessageDialog(this, "Sample tour packages processed. New rows added: " + count);
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error adding sample tour packages: " + e.getMessage());
-        }
-    }
 
     private void viewPackageDetails(JTable table, DefaultTableModel model) {
         int selectedRow = table.getSelectedRow();
