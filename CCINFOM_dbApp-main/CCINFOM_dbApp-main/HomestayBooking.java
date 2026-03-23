@@ -1489,6 +1489,7 @@ public class HomestayBooking extends JFrame {
             insertSampleTourPackages();
             loadTourPackages(model);
         });
+        viewBtn.addActionListener(e -> viewPackageDetails(table, model));
 
         JPanel actions = new JPanel();
         actions.add(loadBtn);
