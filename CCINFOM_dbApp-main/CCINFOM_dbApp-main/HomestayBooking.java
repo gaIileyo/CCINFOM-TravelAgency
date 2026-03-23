@@ -2233,6 +2233,253 @@ private void loadBookingHistory(DefaultTableModel model) {
     }
 }
 
+     private JPanel tourPackagePanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        DefaultTableModel model = new DefaultTableModel();
+        JTable table = new JTable(model);
+        model.setColumnIdentifiers(new String[]{"Package ID", "Package Name", "Category", "Duration", "Price", "Max Guests", "Inclusions"});
+
+        JButton loadBtn = new JButton("Load Tour Packages");
+        JButton seedBtn = new JButton("Add Sample Tour Packages");
+        JButton viewBtn = new JButton("View Package Details");
+
+        loadBtn.addActionListener((e) -> this.loadTourPackages(model));
+        seedBtn.addActionListener((e) -> {
+            this.insertSampleTourPackages();
+            this.loadTourPackages(model);
+        });
+        viewBtn.addActionListener((e) -> this.viewPackageDetails(table, model));
+
+        JPanel actions = new JPanel();
+        actions.add(loadBtn);
+        actions.add(seedBtn);
+        actions.add(viewBtn);
+
+        panel.add(new JScrollPane(table), BorderLayout.CENTER);
+        panel.add(actions, BorderLayout.SOUTH);
+        return panel;
+    }
+
+    private void loadTourPackages(DefaultTableModel model) {
+        if (this.conn == null) {
+            JOptionPane.showMessageDialog(this, "No database connection.");
+            return;
+        }
+        try (Statement st = this.conn.createStatement();
+             ResultSet rs = st.executeQuery("SELECT * FROM tour_package ORDER BY package_id")) {
+            model.setRowCount(0);
+            while(rs.next()) {
+                model.addRow(new Object[]{
+                        rs.getInt("package_id"),
+                        rs.getString("package_name"),
+                        rs.getString("category"),
+                        rs.getString("duration"),
+                        rs.getDouble("price"),
+                        rs.getInt("max_guests"),
+                        rs.getString("inclusions")
+                });
+            }
+            if (model.getRowCount() == 0) {
+                JOptionPane.showMessageDialog(this, "No tour packages found. Click 'Add Sample Tour Packages'.");
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error loading tour packages: " + e.getMessage());
+        }
+    }
+
+    private void insertSampleTourPackages() {
+        if (this.conn == null) {
+            JOptionPane.showMessageDialog(this, "No database connection.");
+            return;
+        }
+        String[] inserts = new String[]{
+                "INSERT INTO tour_package (package_name, category, duration, price, max_guests, inclusions) SELECT 'Intramuros City Highlights','City Tour','1 Day',1800.00,20,'Transport, guide, lunch' WHERE NOT EXISTS (SELECT 1 FROM tour_package WHERE package_name='Intramuros City Highlights')",
+                "INSERT INTO tour_package (package_name, category, duration, price, max_guests, inclusions) SELECT 'Manila Heritage Walk','Heritage','Half Day',1200.00,15,'Licensed guide, museum entry, bottled water' WHERE NOT EXISTS (SELECT 1 FROM tour_package WHERE package_name='Manila Heritage Walk')",
+                "INSERT INTO tour_package (package_name, category, duration, price, max_guests, inclusions) SELECT 'Binondo Food Adventure','Food','Evening',1500.00,12,'Food tastings, guide, local maps' WHERE NOT EXISTS (SELECT 1 FROM tour_package WHERE package_name='Binondo Food Adventure')"
+        };
+        try (Statement st = this.conn.createStatement()) {
+            int count = 0;
+            for(String query : inserts) count += st.executeUpdate(query);
+            JOptionPane.showMessageDialog(this, "Sample tour packages processed. New rows added: " + count);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error adding sample tour packages: " + e.getMessage());
+        }
+    }
+
+    private void viewPackageDetails(JTable table, DefaultTableModel model) {
+        int selectedRow = table.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Please select a tour package from the table first.");
+            return;
+        }
+
+        String packageId = model.getValueAt(selectedRow, 0).toString();
+        String packageName = model.getValueAt(selectedRow, 1).toString();
+        String category = model.getValueAt(selectedRow, 2).toString();
+
+        try {
+            int popularity = 0;
+            String popSql = "SELECT COUNT(*) FROM tour_reservation WHERE package_id = ?";
+            try (PreparedStatement ps = this.conn.prepareStatement(popSql)) {
+                ps.setInt(1, Integer.parseInt(packageId));
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) popularity = rs.getInt(1);
+            }
+
+            StringBuilder guidesList = new StringBuilder();
+            String guideSql = "SELECT first_name, last_name, daily_service_rate FROM guide WHERE specialization = ?";
+            try (PreparedStatement ps = this.conn.prepareStatement(guideSql)) {
+                ps.setString(1, category);
+                ResultSet rs = ps.executeQuery();
+                while (rs.next()) {
+                    guidesList.append("- ").append(rs.getString("first_name")).append(" ")
+                            .append(rs.getString("last_name")).append(" (Php ")
+                            .append(rs.getDouble("daily_service_rate")).append(")\n");
+                }
+            }
+            if (guidesList.length() == 0) guidesList.append("No guides available for this category.");
+
+            JOptionPane.showMessageDialog(this,
+                    "Package: " + packageName + "\nCategory: " + category + "\nPopularity (Total Bookings): " + popularity + "\n\nQualified Guides:\n" + guidesList.toString(),
+                    "Tour Package Details", JOptionPane.INFORMATION_MESSAGE);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error fetching details: " + e.getMessage());
+        }
+    }
+
+  
+    private JPanel tourReservationPanel() {
+        JPanel panel = new JPanel(new BorderLayout(8, 8));
+        JPanel formPanel = new JPanel(new GridLayout(7, 2, 5, 5));
+
+        JComboBox<SelectionItem> guestCombo = new JComboBox<>();
+        JComboBox<SelectionItem> tourCombo = new JComboBox<>();
+        JComboBox<SelectionItem> guideCombo = new JComboBox<>();
+        JTextField tourDate = new JTextField("2025-05-01");
+        JTextField paxField = new JTextField("1");
+        JComboBox<String> statusCombo = new JComboBox<>(new String[]{"Confirmed", "Waitlisted", "Cancelled"});
+
+        JButton saveBtn = new JButton("Save Reservation");
+        JButton refreshBtn = new JButton("Load/Refresh Dropdowns");
+
+        formPanel.add(new JLabel("Guest:")); formPanel.add(guestCombo);
+        formPanel.add(new JLabel("Tour Package:")); formPanel.add(tourCombo);
+        formPanel.add(new JLabel("Assigned Guide:")); formPanel.add(guideCombo);
+        formPanel.add(new JLabel("Tour Date (YYYY-MM-DD):")); formPanel.add(tourDate);
+        formPanel.add(new JLabel("Number of Pax:")); formPanel.add(paxField);
+        formPanel.add(new JLabel("Status:")); formPanel.add(statusCombo);
+        formPanel.add(refreshBtn); formPanel.add(saveBtn);
+
+        refreshBtn.addActionListener(e -> loadTourResDropdowns(guestCombo, guideCombo, tourCombo));
+
+        saveBtn.addActionListener(e -> {
+            if (conn == null) return;
+            try {
+                int pax = Integer.parseInt(paxField.getText().trim());
+                String date = tourDate.getText().trim();
+                SelectionItem guest = (SelectionItem) guestCombo.getSelectedItem();
+                SelectionItem tour = (SelectionItem) tourCombo.getSelectedItem();
+                SelectionItem guide = (SelectionItem) guideCombo.getSelectedItem();
+
+                if (guest == null || tour == null || guide == null) throw new Exception("Select all fields.");
+
+                int guestId = Integer.parseInt(guest.id);
+                int packageId = Integer.parseInt(tour.id);
+                int guideId = Integer.parseInt(guide.id);
+
+                conn.setAutoCommit(false);
+
+                // Capacity & Cost
+                double basePrice = 0; int maxGuests = 0;
+                try (PreparedStatement ps = conn.prepareStatement("SELECT price, max_guests FROM tour_package WHERE package_id = ?")) {
+                    ps.setInt(1, packageId);
+                    ResultSet rs = ps.executeQuery();
+                    if (rs.next()) { basePrice = rs.getDouble("price"); maxGuests = rs.getInt("max_guests"); }
+                }
+                if (pax <= 0 || pax > maxGuests) throw new Exception("Pax exceeds limit (Max: " + maxGuests + ").");
+                double totalCost = basePrice * pax;
+
+                //  Guide Cross-Check
+                try (PreparedStatement ps = conn.prepareStatement("SELECT COUNT(*) FROM tour_reservation WHERE assigned_guide_id = ? AND tour_date = ? AND reservation_status = 'Confirmed'")) {
+                    ps.setInt(1, guideId); ps.setDate(2, Date.valueOf(date));
+                    ResultSet rs = ps.executeQuery();
+                    if (rs.next() && rs.getInt(1) > 0) throw new Exception("Guide is already booked on this date.");
+                }
+
+                //  Insert
+                String insertSql = "INSERT INTO tour_reservation (guest_id, package_id, assigned_guide_id, tour_date, number_of_pax, total_tour_cost, reservation_status) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                try (PreparedStatement ps = conn.prepareStatement(insertSql)) {
+                    ps.setInt(1, guestId); ps.setInt(2, packageId); ps.setInt(3, guideId);
+                    ps.setDate(4, Date.valueOf(date)); ps.setInt(5, pax); ps.setDouble(6, totalCost);
+                    ps.setString(7, statusCombo.getSelectedItem().toString());
+                    ps.executeUpdate();
+                }
+
+                conn.commit();
+                JOptionPane.showMessageDialog(panel, "Reservation saved! Total Cost: Php " + totalCost);
+            } catch (Exception ex) {
+                try { conn.rollback(); } catch (Exception ignored) {}
+                JOptionPane.showMessageDialog(panel, "Transaction Failed: " + ex.getMessage());
+            } finally {
+                try { conn.setAutoCommit(true); } catch (Exception ignored) {}
+            }
+        });
+
+        panel.add(formPanel, BorderLayout.NORTH);
+        return panel;
+    }
+
+    private void loadTourResDropdowns(JComboBox<SelectionItem> guests, JComboBox<SelectionItem> guides, JComboBox<SelectionItem> tours) {
+        if (conn == null) return;
+        try (Statement st = conn.createStatement()) {
+            guests.removeAllItems(); guides.removeAllItems(); tours.removeAllItems();
+            ResultSet rs = st.executeQuery("SELECT guest_id, CONCAT(first_name, ' ', last_name) FROM guest");
+            while (rs.next()) guests.addItem(new SelectionItem(String.valueOf(rs.getInt(1)), rs.getString(2)));
+            rs = st.executeQuery("SELECT guide_id, CONCAT(first_name, ' ', last_name) FROM guide");
+            while (rs.next()) guides.addItem(new SelectionItem(String.valueOf(rs.getInt(1)), rs.getString(2)));
+            rs = st.executeQuery("SELECT package_id, package_name FROM tour_package");
+            while (rs.next()) tours.addItem(new SelectionItem(String.valueOf(rs.getInt(1)), rs.getString(2)));
+        } catch (Exception ignored) {}
+    }
+
+   
+    private JPanel tourPerformanceReportPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        JPanel top = new JPanel();
+        JTextField monthField = new JTextField(5);
+        JTextField yearField = new JTextField(5);
+        JButton generateBtn = new JButton("Generate Report");
+
+        top.add(new JLabel("Month (MM):")); top.add(monthField);
+        top.add(new JLabel("Year (YYYY):")); top.add(yearField);
+        top.add(generateBtn);
+
+        DefaultTableModel model = new DefaultTableModel();
+        JTable table = new JTable(model);
+        model.setColumnIdentifiers(new String[]{"Package Name", "Total Bookings", "Total Revenue (Php)"});
+
+        generateBtn.addActionListener(e -> {
+            if (conn == null) return;
+            try {
+                int month = Integer.parseInt(monthField.getText().trim());
+                int year = Integer.parseInt(yearField.getText().trim());
+                model.setRowCount(0);
+                String sql = "SELECT p.package_name, COUNT(r.reservation_id) AS bookings, SUM(r.total_tour_cost) AS revenue " +
+                        "FROM tour_package p JOIN tour_reservation r ON p.package_id = r.package_id " +
+                        "WHERE MONTH(r.tour_date) = ? AND YEAR(r.tour_date) = ? AND r.reservation_status = 'Confirmed' " +
+                        "GROUP BY p.package_id ORDER BY revenue DESC";
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setInt(1, month); ps.setInt(2, year);
+                    ResultSet rs = ps.executeQuery();
+                    while (rs.next()) model.addRow(new Object[]{ rs.getString("package_name"), rs.getInt("bookings"), rs.getDouble("revenue") });
+                }
+            } catch (Exception ex) { JOptionPane.showMessageDialog(panel, "Error: Check Month/Year inputs."); }
+        });
+
+        panel.add(top, BorderLayout.NORTH);
+        panel.add(new JScrollPane(table), BorderLayout.CENTER);
+        return panel;
+    }
     public static void main(String[] args) {
         SwingUtilities.invokeLater(HomestayBooking::new);
     }
