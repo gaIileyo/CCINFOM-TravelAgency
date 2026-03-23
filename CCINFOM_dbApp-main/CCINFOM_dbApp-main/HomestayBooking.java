@@ -104,6 +104,8 @@ public class HomestayBooking extends JFrame {
         tabs.add("Booking Transaction", bookingTransactionPanel());
         tabs.add("Booking History Report", reportPanel());
         tabs.add("Guide & Traveler Report", guideTravelerReportPanel());
+        tabs.add("Tour Reservations", tourReservationPanel());
+        tabs.add("Tour Performance Report", tourPerformanceReportPanel());
         
 
         add(tabs);
