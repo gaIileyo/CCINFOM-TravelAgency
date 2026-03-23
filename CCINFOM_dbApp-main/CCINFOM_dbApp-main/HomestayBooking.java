@@ -1480,6 +1480,7 @@ public class HomestayBooking extends JFrame {
 
         JButton loadBtn = new JButton("Load Tour Packages");
         JButton seedBtn = new JButton("Add Sample Tour Packages");
+        JButton viewBtn = new JButton("View Package Details");
 
         loadBtn.addActionListener(e -> loadTourPackages(model));
         seedBtn.addActionListener(e -> {
@@ -1490,6 +1491,7 @@ public class HomestayBooking extends JFrame {
         JPanel actions = new JPanel();
         actions.add(loadBtn);
         actions.add(seedBtn);
+        actions.add(viewBtn);
 
         panel.add(new JScrollPane(table), BorderLayout.CENTER);
         panel.add(actions, BorderLayout.SOUTH);
