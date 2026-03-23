@@ -2360,6 +2360,7 @@ private void loadBookingHistory(DefaultTableModel model) {
         });
 
         panel.add(formPanel, BorderLayout.NORTH);
+        loadTourResDropdowns(guestCombo, guideCombo, tourCombo);
         return panel;
     }
 
