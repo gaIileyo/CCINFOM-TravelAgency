@@ -106,7 +106,7 @@ public class HomestayBooking extends JFrame {
         tabs.add("Guide & Traveler Report", guideTravelerReportPanel());
         tabs.add("Tour Reservations", tourReservationPanel());
         tabs.add("Tour Performance Report", tourPerformanceReportPanel());
-        
+
 
         add(tabs);
         setVisible(true);
@@ -296,12 +296,12 @@ public class HomestayBooking extends JFrame {
 
     private JPanel guidePanel() {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
-    
+
         JPanel formPanel = new JPanel(new GridLayout(9, 2, 8, 8));
-    
+
         guideIdField = new JTextField();
         guideIdField.setEditable(false);
-    
+
         guideLastNameField = new JTextField();
         guideFirstNameField = new JTextField();
         guideContactField = new JTextField();
@@ -309,54 +309,54 @@ public class HomestayBooking extends JFrame {
         guideDailyRateField = new JTextField();
         guideDotField = new JTextField();
         guideSearchField = new JTextField();
-    
+
         guideSpecializationCombo = new JComboBox<>(new String[]{
                 "City Tour", "Heritage", "Food"
         });
-    
+
         formPanel.add(new JLabel("Guide ID:"));
         formPanel.add(guideIdField);
-    
+
         formPanel.add(new JLabel("Last Name:"));
         formPanel.add(guideLastNameField);
-    
+
         formPanel.add(new JLabel("First Name:"));
         formPanel.add(guideFirstNameField);
-    
+
         formPanel.add(new JLabel("Contact Number:"));
         formPanel.add(guideContactField);
-    
+
         formPanel.add(new JLabel("Specialization:"));
         formPanel.add(guideSpecializationCombo);
-    
+
         formPanel.add(new JLabel("Languages Spoken:"));
         formPanel.add(guideLanguagesField);
-    
+
         formPanel.add(new JLabel("Daily Service Rate:"));
         formPanel.add(guideDailyRateField);
-    
+
         formPanel.add(new JLabel("DOT Accreditation No.:"));
         formPanel.add(guideDotField);
-    
+
         formPanel.add(new JLabel("Search:"));
         formPanel.add(guideSearchField);
-    
+
         guideModel = new DefaultTableModel();
         guideModel.setColumnIdentifiers(new String[]{
                 "Guide ID", "Last Name", "First Name", "Contact", "Specialization",
                 "Languages", "Daily Rate", "DOT Accreditation"
         });
-    
+
         guideTable = new JTable(guideModel);
         guideTable.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
-    
+
         JButton loadBtn = new JButton("Load Guides");
         JButton seedBtn = new JButton("Add Sample Guides");
         JButton addBtn = new JButton("Add Guide");
         JButton updateBtn = new JButton("Update Guide");
         JButton deleteBtn = new JButton("Delete Guide");
         JButton clearBtn = new JButton("Clear");
-    
+
         loadBtn.addActionListener(e -> loadGuides(guideModel));
         seedBtn.addActionListener(e -> {
             insertSampleGuides();
@@ -366,30 +366,30 @@ public class HomestayBooking extends JFrame {
         updateBtn.addActionListener(e -> updateGuide());
         deleteBtn.addActionListener(e -> deleteGuide());
         clearBtn.addActionListener(e -> clearGuideFields());
-    
+
         guideTable.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 populateGuideFieldsFromTable();
             }
         });
-    
+
         guideSearchField.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
                 searchGuides();
             }
-    
+
             @Override
             public void removeUpdate(DocumentEvent e) {
                 searchGuides();
             }
-    
+
             @Override
             public void changedUpdate(DocumentEvent e) {
                 searchGuides();
             }
         });
-    
+
         JPanel buttonPanel = new JPanel();
         buttonPanel.add(loadBtn);
         buttonPanel.add(seedBtn);
@@ -397,14 +397,14 @@ public class HomestayBooking extends JFrame {
         buttonPanel.add(updateBtn);
         buttonPanel.add(deleteBtn);
         buttonPanel.add(clearBtn);
-    
+
         JPanel topPanel = new JPanel(new BorderLayout(10, 10));
         topPanel.add(formPanel, BorderLayout.CENTER);
         topPanel.add(buttonPanel, BorderLayout.SOUTH);
-    
+
         panel.add(topPanel, BorderLayout.NORTH);
         panel.add(new JScrollPane(guideTable), BorderLayout.CENTER);
-    
+
         return panel;
     }
 
@@ -442,7 +442,7 @@ public class HomestayBooking extends JFrame {
         if (row == -1) {
             return;
         }
-    
+
         guideIdField.setText(guideModel.getValueAt(row, 0).toString());
         guideLastNameField.setText(guideModel.getValueAt(row, 1).toString());
         guideFirstNameField.setText(guideModel.getValueAt(row, 2).toString());
@@ -470,7 +470,7 @@ public class HomestayBooking extends JFrame {
             JOptionPane.showMessageDialog(this, "No database connection.");
             return;
         }
-    
+
         String lastName = guideLastNameField.getText().trim();
         String firstName = guideFirstNameField.getText().trim();
         String contact = guideContactField.getText().trim();
@@ -478,12 +478,12 @@ public class HomestayBooking extends JFrame {
         String languages = guideLanguagesField.getText().trim();
         String rateText = guideDailyRateField.getText().trim();
         String dot = guideDotField.getText().trim();
-    
+
         if (lastName.isEmpty() || firstName.isEmpty() || contact.isEmpty() || rateText.isEmpty() || dot.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Please fill in all required guide fields.");
             return;
         }
-    
+
         double rate;
         try {
             rate = Double.parseDouble(rateText);
@@ -495,13 +495,13 @@ public class HomestayBooking extends JFrame {
             JOptionPane.showMessageDialog(this, "Daily service rate must be a valid number.");
             return;
         }
-    
+
         String sql = """
             INSERT INTO guide
             (last_name, first_name, contact_number, specialization, languages_spoken, daily_service_rate, dot_accreditation_number)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         """;
-    
+
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, lastName);
             ps.setString(2, firstName);
@@ -510,13 +510,13 @@ public class HomestayBooking extends JFrame {
             ps.setString(5, languages);
             ps.setDouble(6, rate);
             ps.setString(7, dot);
-    
+
             ps.executeUpdate();
-    
+
             JOptionPane.showMessageDialog(this, "Guide added successfully.");
             clearGuideFields();
             loadGuides(guideModel);
-    
+
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this, "Error adding guide: " + ex.getMessage());
         }
@@ -527,13 +527,13 @@ public class HomestayBooking extends JFrame {
             JOptionPane.showMessageDialog(this, "No database connection.");
             return;
         }
-    
+
         String idText = guideIdField.getText().trim();
         if (idText.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Please select a guide to update.");
             return;
         }
-    
+
         String lastName = guideLastNameField.getText().trim();
         String firstName = guideFirstNameField.getText().trim();
         String contact = guideContactField.getText().trim();
@@ -541,12 +541,12 @@ public class HomestayBooking extends JFrame {
         String languages = guideLanguagesField.getText().trim();
         String rateText = guideDailyRateField.getText().trim();
         String dot = guideDotField.getText().trim();
-    
+
         if (lastName.isEmpty() || firstName.isEmpty() || contact.isEmpty() || rateText.isEmpty() || dot.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Please fill in all required guide fields.");
             return;
         }
-    
+
         double rate;
         try {
             rate = Double.parseDouble(rateText);
@@ -558,14 +558,14 @@ public class HomestayBooking extends JFrame {
             JOptionPane.showMessageDialog(this, "Daily service rate must be a valid number.");
             return;
         }
-    
+
         String sql = """
             UPDATE guide
             SET last_name = ?, first_name = ?, contact_number = ?, specialization = ?,
                 languages_spoken = ?, daily_service_rate = ?, dot_accreditation_number = ?
             WHERE guide_id = ?
         """;
-    
+
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, lastName);
             ps.setString(2, firstName);
@@ -575,9 +575,9 @@ public class HomestayBooking extends JFrame {
             ps.setDouble(6, rate);
             ps.setString(7, dot);
             ps.setInt(8, Integer.parseInt(idText));
-    
+
             int updated = ps.executeUpdate();
-    
+
             if (updated > 0) {
                 JOptionPane.showMessageDialog(this, "Guide updated successfully.");
                 clearGuideFields();
@@ -585,7 +585,7 @@ public class HomestayBooking extends JFrame {
             } else {
                 JOptionPane.showMessageDialog(this, "No guide record was updated.");
             }
-    
+
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this, "Error updating guide: " + ex.getMessage());
         }
@@ -596,31 +596,31 @@ public class HomestayBooking extends JFrame {
             JOptionPane.showMessageDialog(this, "No database connection.");
             return;
         }
-    
+
         String idText = guideIdField.getText().trim();
         if (idText.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Please select a guide to delete.");
             return;
         }
-    
+
         int confirm = JOptionPane.showConfirmDialog(
                 this,
                 "Are you sure you want to delete this guide?",
                 "Confirm Delete",
                 JOptionPane.YES_NO_OPTION
         );
-    
+
         if (confirm != JOptionPane.YES_OPTION) {
             return;
         }
-    
+
         String sql = "DELETE FROM guide WHERE guide_id = ?";
-    
+
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, Integer.parseInt(idText));
-    
+
             int deleted = ps.executeUpdate();
-    
+
             if (deleted > 0) {
                 JOptionPane.showMessageDialog(this, "Guide deleted successfully.");
                 clearGuideFields();
@@ -628,7 +628,7 @@ public class HomestayBooking extends JFrame {
             } else {
                 JOptionPane.showMessageDialog(this, "No guide record was deleted.");
             }
-    
+
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this, "Error deleting guide: " + ex.getMessage());
         }
@@ -639,14 +639,14 @@ public class HomestayBooking extends JFrame {
             JOptionPane.showMessageDialog(this, "No database connection.");
             return;
         }
-    
+
         String keyword = guideSearchField.getText().trim();
-    
+
         if (keyword.isEmpty()) {
             loadGuides(guideModel);
             return;
         }
-    
+
         String sql = """
             SELECT * FROM guide
             WHERE CAST(guide_id AS CHAR) LIKE ?
@@ -659,10 +659,10 @@ public class HomestayBooking extends JFrame {
                OR dot_accreditation_number LIKE ?
             ORDER BY guide_id
         """;
-    
+
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             String searchText = "%" + keyword + "%";
-    
+
             ps.setString(1, searchText);
             ps.setString(2, searchText);
             ps.setString(3, searchText);
@@ -671,10 +671,10 @@ public class HomestayBooking extends JFrame {
             ps.setString(6, searchText);
             ps.setString(7, searchText);
             ps.setString(8, searchText);
-    
+
             try (ResultSet rs = ps.executeQuery()) {
                 guideModel.setRowCount(0);
-    
+
                 while (rs.next()) {
                     guideModel.addRow(new Object[]{
                             rs.getString("guide_id"),
@@ -688,7 +688,7 @@ public class HomestayBooking extends JFrame {
                     });
                 }
             }
-    
+
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this, "Error searching guides: " + ex.getMessage());
         }
@@ -725,57 +725,57 @@ public class HomestayBooking extends JFrame {
 
     private JPanel guideHiringPanel() {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
-    
+
         JPanel formPanel = new JPanel(new GridLayout(6, 2, 8, 8));
-    
+
         guideHireIdField = new JTextField();
         guideHireIdField.setEditable(false);
-    
+
         guideHiringGuestCombo = new JComboBox<>();
         guideHiringGuideCombo = new JComboBox<>();
-    
+
         guideHiringDateField = new JTextField();
         guideHiringFeeField = new JTextField();
         guideHiringSearchField = new JTextField();
-    
+
         guideHiringStatusCombo = new JComboBox<>(new String[]{
                 "Pending", "Confirmed", "Cancelled"
         });
-    
+
         formPanel.add(new JLabel("Guide Hire ID:"));
         formPanel.add(guideHireIdField);
-    
+
         formPanel.add(new JLabel("Guest:"));
         formPanel.add(guideHiringGuestCombo);
-    
+
         formPanel.add(new JLabel("Guide:"));
         formPanel.add(guideHiringGuideCombo);
-    
+
         formPanel.add(new JLabel("Tour Date (YYYY-MM-DD):"));
         formPanel.add(guideHiringDateField);
-    
+
         formPanel.add(new JLabel("Service Fee:"));
         formPanel.add(guideHiringFeeField);
-    
+
         formPanel.add(new JLabel("Hiring Status:"));
         formPanel.add(guideHiringStatusCombo);
-    
+
         guideHiringModel = new DefaultTableModel();
         guideHiringModel.setColumnIdentifiers(new String[]{
                 "Guide Hire ID", "Guest ID", "Guest Name", "Guide ID", "Guide Name",
                 "Tour Date", "Service Fee", "Hiring Status"
         });
-    
+
         guideHiringTable = new JTable(guideHiringModel);
         guideHiringTable.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
-    
+
         JButton loadBtn = new JButton("Load Guide Hirings");
         JButton addBtn = new JButton("Add Hiring");
         JButton updateBtn = new JButton("Update Hiring");
         JButton deleteBtn = new JButton("Delete Hiring");
         JButton clearBtn = new JButton("Clear");
         JButton reloadRefsBtn = new JButton("Reload Guests/Guides");
-    
+
         loadBtn.addActionListener(e -> loadGuideHirings());
         addBtn.addActionListener(e -> addGuideHiring());
         updateBtn.addActionListener(e -> updateGuideHiring());
@@ -785,36 +785,36 @@ public class HomestayBooking extends JFrame {
             loadGuideHiringGuests();
             loadGuideHiringGuides();
         });
-    
+
         guideHiringGuideCombo.addActionListener(e -> autofillGuideServiceFee());
-    
+
         guideHiringTable.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 populateGuideHiringFieldsFromTable();
             }
         });
-    
+
         JPanel searchPanel = new JPanel(new BorderLayout(8, 8));
         searchPanel.add(new JLabel("Search:"), BorderLayout.WEST);
         searchPanel.add(guideHiringSearchField, BorderLayout.CENTER);
-    
+
         guideHiringSearchField.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
                 searchGuideHirings();
             }
-    
+
             @Override
             public void removeUpdate(DocumentEvent e) {
                 searchGuideHirings();
             }
-    
+
             @Override
             public void changedUpdate(DocumentEvent e) {
                 searchGuideHirings();
             }
         });
-    
+
         JPanel buttonPanel = new JPanel();
         buttonPanel.add(loadBtn);
         buttonPanel.add(addBtn);
@@ -822,18 +822,18 @@ public class HomestayBooking extends JFrame {
         buttonPanel.add(deleteBtn);
         buttonPanel.add(clearBtn);
         buttonPanel.add(reloadRefsBtn);
-    
+
         JPanel topPanel = new JPanel(new BorderLayout(10, 10));
         topPanel.add(formPanel, BorderLayout.NORTH);
         topPanel.add(searchPanel, BorderLayout.CENTER);
         topPanel.add(buttonPanel, BorderLayout.SOUTH);
-    
+
         panel.add(topPanel, BorderLayout.NORTH);
         panel.add(new JScrollPane(guideHiringTable), BorderLayout.CENTER);
-    
+
         loadGuideHiringGuests();
         loadGuideHiringGuides();
-    
+
         return panel;
     }
 
@@ -841,20 +841,20 @@ public class HomestayBooking extends JFrame {
         if (conn == null) {
             return;
         }
-    
+
         guideHiringGuestCombo.removeAllItems();
-    
+
         String sql = "SELECT guest_id, first_name, last_name FROM guest ORDER BY last_name, first_name";
-    
+
         try (Statement st = conn.createStatement();
              ResultSet rs = st.executeQuery(sql)) {
-    
+
             while (rs.next()) {
                 String id = String.valueOf(rs.getString("guest_id"));
                 String label = rs.getString("last_name") + ", " + rs.getString("first_name");
                 guideHiringGuestCombo.addItem(new SelectionItem(id, label));
             }
-    
+
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this, "Error loading guests for guide hiring: " + ex.getMessage());
         }
@@ -862,27 +862,27 @@ public class HomestayBooking extends JFrame {
 
     private void loadGuideHiringGuides() {
         guideHiringGuideCombo.removeAllItems();
-    
+
         if (conn == null) {
             return;
         }
-    
+
         String sql = """
             SELECT guide_id, first_name, last_name, daily_service_rate
             FROM guide
             ORDER BY last_name, first_name
         """;
-    
+
         try (PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
-    
+
             while (rs.next()) {
                 String id = String.valueOf(rs.getString("guide_id"));
                 String label = rs.getString("last_name") + ", " + rs.getString("first_name")
                         + " (₱" + rs.getDouble("daily_service_rate") + ")";
                 guideHiringGuideCombo.addItem(new SelectionItem(id, label));
             }
-    
+
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this, "Error loading guides: " + ex.getMessage());
         }
@@ -892,23 +892,23 @@ public class HomestayBooking extends JFrame {
         if (conn == null) {
             return;
         }
-    
+
         SelectionItem selectedGuide = (SelectionItem) guideHiringGuideCombo.getSelectedItem();
         if (selectedGuide == null) {
             return;
         }
-    
+
         String sql = "SELECT daily_service_rate FROM guide WHERE guide_id = ?";
-    
+
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, selectedGuide.id);
-    
+
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     guideHiringFeeField.setText(rs.getString("daily_service_rate"));
                 }
             }
-    
+
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this, "Error loading guide service fee: " + ex.getMessage());
         }
@@ -919,7 +919,7 @@ public class HomestayBooking extends JFrame {
             JOptionPane.showMessageDialog(this, "No database connection.");
             return;
         }
-    
+
         String sql = """
             SELECT gh.guide_hire_id,
                    gh.guest_id,
@@ -934,12 +934,12 @@ public class HomestayBooking extends JFrame {
             JOIN guide g ON gh.guide_id = g.guide_id
             ORDER BY gh.guide_hire_id
         """;
-    
+
         try (Statement st = conn.createStatement();
              ResultSet rs = st.executeQuery(sql)) {
-    
+
             guideHiringModel.setRowCount(0);
-    
+
             while (rs.next()) {
                 guideHiringModel.addRow(new Object[]{
                         rs.getInt("guide_hire_id"),
@@ -952,7 +952,7 @@ public class HomestayBooking extends JFrame {
                         rs.getString("hiring_status")
                 });
             }
-    
+
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this, "Error loading guide hiring records: " + ex.getMessage());
         }
@@ -963,14 +963,14 @@ public class HomestayBooking extends JFrame {
         if (row == -1) {
             return;
         }
-    
+
         guideHireIdField.setText(guideHiringModel.getValueAt(row, 0).toString());
         String guestId = guideHiringModel.getValueAt(row, 1).toString();
         String guideId = guideHiringModel.getValueAt(row, 3).toString();
-    
+
         selectComboItemById(guideHiringGuestCombo, guestId);
         selectComboItemById(guideHiringGuideCombo, guideId);
-    
+
         guideHiringDateField.setText(guideHiringModel.getValueAt(row, 5).toString());
         guideHiringFeeField.setText(guideHiringModel.getValueAt(row, 6).toString());
         guideHiringStatusCombo.setSelectedItem(guideHiringModel.getValueAt(row, 7).toString());
@@ -991,15 +991,15 @@ public class HomestayBooking extends JFrame {
         guideHiringDateField.setText("");
         guideHiringFeeField.setText("");
         guideHiringStatusCombo.setSelectedIndex(0);
-    
+
         if (guideHiringGuestCombo.getItemCount() > 0) {
             guideHiringGuestCombo.setSelectedIndex(0);
         }
-    
+
         if (guideHiringGuideCombo.getItemCount() > 0) {
             guideHiringGuideCombo.setSelectedIndex(0);
         }
-    
+
         guideHiringTable.clearSelection();
     }
 
@@ -1011,19 +1011,19 @@ public class HomestayBooking extends JFrame {
               AND tour_date = ?
               AND hiring_status IN ('Pending', 'Confirmed')
         """;
-    
+
         if (currentGuideHireId != null && !currentGuideHireId.isBlank()) {
             sql += " AND guide_hire_id <> ?";
         }
-    
+
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, guideId);
             ps.setDate(2, Date.valueOf(tourDate));
-    
+
             if (currentGuideHireId != null && !currentGuideHireId.isBlank()) {
                 ps.setInt(3, Integer.parseInt(currentGuideHireId));
             }
-    
+
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     return rs.getInt("total") == 0;
@@ -1034,7 +1034,7 @@ public class HomestayBooking extends JFrame {
         } catch (IllegalArgumentException ex) {
             JOptionPane.showMessageDialog(this, "Invalid date format. Use YYYY-MM-DD.");
         }
-    
+
         return false;
     }
 
@@ -1043,24 +1043,24 @@ public class HomestayBooking extends JFrame {
             JOptionPane.showMessageDialog(this, "No database connection.");
             return;
         }
-    
+
         SelectionItem guestItem = (SelectionItem) guideHiringGuestCombo.getSelectedItem();
         SelectionItem guideItem = (SelectionItem) guideHiringGuideCombo.getSelectedItem();
-    
+
         if (guestItem == null || guideItem == null) {
             JOptionPane.showMessageDialog(this, "Please select both a guest and a guide.");
             return;
         }
-    
+
         String tourDate = guideHiringDateField.getText().trim();
         String feeText = guideHiringFeeField.getText().trim();
         String status = (String) guideHiringStatusCombo.getSelectedItem();
-    
+
         if (tourDate.isEmpty() || feeText.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Please fill in the tour date and service fee.");
             return;
         }
-    
+
         double fee;
         try {
             fee = Double.parseDouble(feeText);
@@ -1072,39 +1072,39 @@ public class HomestayBooking extends JFrame {
             JOptionPane.showMessageDialog(this, "Service fee must be a valid number.");
             return;
         }
-    
+
         int guideId = Integer.parseInt(guideItem.id);
-    
+
         try {
             Date.valueOf(tourDate);
         } catch (IllegalArgumentException ex) {
             JOptionPane.showMessageDialog(this, "Invalid date format. Use YYYY-MM-DD.");
             return;
         }
-    
+
         if (!"Cancelled".equals(status) && !isGuideAvailable(guideId, tourDate, null)) {
             JOptionPane.showMessageDialog(this, "This guide is already booked on that tour date.");
             return;
         }
-    
+
         String sql = """
             INSERT INTO guide_hiring (guest_id, guide_id, tour_date, service_fee, hiring_status)
             VALUES (?, ?, ?, ?, ?)
         """;
-    
+
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, Integer.parseInt(guestItem.id));
             ps.setInt(2, guideId);
             ps.setDate(3, Date.valueOf(tourDate));
             ps.setDouble(4, fee);
             ps.setString(5, status);
-    
+
             ps.executeUpdate();
-    
+
             JOptionPane.showMessageDialog(this, "Guide hiring transaction added successfully.");
             clearGuideHiringFields();
             loadGuideHirings();
-    
+
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this, "Error adding guide hiring transaction: " + ex.getMessage());
         }
@@ -1115,30 +1115,30 @@ public class HomestayBooking extends JFrame {
             JOptionPane.showMessageDialog(this, "No database connection.");
             return;
         }
-    
+
         String guideHireId = guideHireIdField.getText().trim();
         if (guideHireId.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Please select a guide hiring record to update.");
             return;
         }
-    
+
         SelectionItem guestItem = (SelectionItem) guideHiringGuestCombo.getSelectedItem();
         SelectionItem guideItem = (SelectionItem) guideHiringGuideCombo.getSelectedItem();
-    
+
         if (guestItem == null || guideItem == null) {
             JOptionPane.showMessageDialog(this, "Please select both a guest and a guide.");
             return;
         }
-    
+
         String tourDate = guideHiringDateField.getText().trim();
         String feeText = guideHiringFeeField.getText().trim();
         String status = (String) guideHiringStatusCombo.getSelectedItem();
-    
+
         if (tourDate.isEmpty() || feeText.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Please fill in the tour date and service fee.");
             return;
         }
-    
+
         double fee;
         try {
             fee = Double.parseDouble(feeText);
@@ -1150,27 +1150,27 @@ public class HomestayBooking extends JFrame {
             JOptionPane.showMessageDialog(this, "Service fee must be a valid number.");
             return;
         }
-    
+
         int guideId = Integer.parseInt(guideItem.id);
-    
+
         try {
             Date.valueOf(tourDate);
         } catch (IllegalArgumentException ex) {
             JOptionPane.showMessageDialog(this, "Invalid date format. Use YYYY-MM-DD.");
             return;
         }
-    
+
         if (!"Cancelled".equals(status) && !isGuideAvailable(guideId, tourDate, guideHireId)) {
             JOptionPane.showMessageDialog(this, "This guide is already booked on that tour date.");
             return;
         }
-    
+
         String sql = """
             UPDATE guide_hiring
             SET guest_id = ?, guide_id = ?, tour_date = ?, service_fee = ?, hiring_status = ?
             WHERE guide_hire_id = ?
         """;
-    
+
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, Integer.parseInt(guestItem.id));
             ps.setInt(2, guideId);
@@ -1178,9 +1178,9 @@ public class HomestayBooking extends JFrame {
             ps.setDouble(4, fee);
             ps.setString(5, status);
             ps.setInt(6, Integer.parseInt(guideHireId));
-    
+
             int updated = ps.executeUpdate();
-    
+
             if (updated > 0) {
                 JOptionPane.showMessageDialog(this, "Guide hiring transaction updated successfully.");
                 clearGuideHiringFields();
@@ -1188,7 +1188,7 @@ public class HomestayBooking extends JFrame {
             } else {
                 JOptionPane.showMessageDialog(this, "No guide hiring record was updated.");
             }
-    
+
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this, "Error updating guide hiring transaction: " + ex.getMessage());
         }
@@ -1199,31 +1199,31 @@ public class HomestayBooking extends JFrame {
             JOptionPane.showMessageDialog(this, "No database connection.");
             return;
         }
-    
+
         String guideHireId = guideHireIdField.getText().trim();
         if (guideHireId.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Please select a guide hiring record to delete.");
             return;
         }
-    
+
         int confirm = JOptionPane.showConfirmDialog(
                 this,
                 "Are you sure you want to delete this guide hiring record?",
                 "Confirm Delete",
                 JOptionPane.YES_NO_OPTION
         );
-    
+
         if (confirm != JOptionPane.YES_OPTION) {
             return;
         }
-    
+
         String sql = "DELETE FROM guide_hiring WHERE guide_hire_id = ?";
-    
+
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, Integer.parseInt(guideHireId));
-    
+
             int deleted = ps.executeUpdate();
-    
+
             if (deleted > 0) {
                 JOptionPane.showMessageDialog(this, "Guide hiring record deleted successfully.");
                 clearGuideHiringFields();
@@ -1231,7 +1231,7 @@ public class HomestayBooking extends JFrame {
             } else {
                 JOptionPane.showMessageDialog(this, "No guide hiring record was deleted.");
             }
-    
+
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this, "Error deleting guide hiring record: " + ex.getMessage());
         }
@@ -1241,14 +1241,14 @@ public class HomestayBooking extends JFrame {
         if (conn == null) {
             return;
         }
-    
+
         String keyword = guideHiringSearchField.getText().trim();
-    
+
         if (keyword.isEmpty()) {
             loadGuideHirings();
             return;
         }
-    
+
         String sql = """
             SELECT gh.guide_hire_id,
                    gh.guest_id,
@@ -1271,17 +1271,17 @@ public class HomestayBooking extends JFrame {
                OR gh.hiring_status LIKE ?
             ORDER BY gh.guide_hire_id
         """;
-    
+
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             String search = "%" + keyword + "%";
-    
+
             for (int i = 1; i <= 8; i++) {
                 ps.setString(i, search);
             }
-    
+
             try (ResultSet rs = ps.executeQuery()) {
                 guideHiringModel.setRowCount(0);
-    
+
                 while (rs.next()) {
                     guideHiringModel.addRow(new Object[]{
                             rs.getInt("guide_hire_id"),
@@ -1295,7 +1295,7 @@ public class HomestayBooking extends JFrame {
                     });
                 }
             }
-    
+
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this, "Error searching guide hiring records: " + ex.getMessage());
         }
@@ -1303,95 +1303,95 @@ public class HomestayBooking extends JFrame {
 
     private JPanel guideTravelerReportPanel() {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
-    
+
         JPanel filterPanel = new JPanel(new GridLayout(1, 5, 8, 8));
-    
+
         reportMonthCombo = new JComboBox<>(new String[] {
                 "1", "2", "3", "4", "5", "6",
                 "7", "8", "9", "10", "11", "12"
         });
-    
+
         reportYearField = new JTextField();
-    
+
         JButton generateBtn = new JButton("Generate Report");
-    
+
         filterPanel.add(new JLabel("Month:"));
         filterPanel.add(reportMonthCombo);
         filterPanel.add(new JLabel("Year:"));
         filterPanel.add(reportYearField);
         filterPanel.add(generateBtn);
-    
+
         inDemandGuidesModel = new DefaultTableModel();
         inDemandGuidesModel.setColumnIdentifiers(new String[] {
                 "Guide ID", "Guide Name", "Specialization", "Hire Count"
         });
-    
+
         inDemandGuidesTable = new JTable(inDemandGuidesModel);
-    
+
         topTravelersModel = new DefaultTableModel();
         topTravelersModel.setColumnIdentifiers(new String[] {
                 "Guest ID", "Guest Name", "Trip Count"
         });
-    
+
         topTravelersTable = new JTable(topTravelersModel);
-    
+
         JPanel tablesPanel = new JPanel(new GridLayout(2, 1, 10, 10));
-    
+
         JPanel guidePanel = new JPanel(new BorderLayout());
         guidePanel.add(new JLabel("In-Demand Guides"), BorderLayout.NORTH);
         guidePanel.add(new JScrollPane(inDemandGuidesTable), BorderLayout.CENTER);
-    
+
         JPanel travelerPanel = new JPanel(new BorderLayout());
         travelerPanel.add(new JLabel("Top Travelers"), BorderLayout.NORTH);
         travelerPanel.add(new JScrollPane(topTravelersTable), BorderLayout.CENTER);
-    
+
         tablesPanel.add(guidePanel);
         tablesPanel.add(travelerPanel);
-    
+
         generateBtn.addActionListener(e -> generateGuideTravelerReport());
-    
+
         panel.add(filterPanel, BorderLayout.NORTH);
         panel.add(tablesPanel, BorderLayout.CENTER);
-    
+
         return panel;
     }
-    
+
     private void generateGuideTravelerReport() {
         if (conn == null) {
             JOptionPane.showMessageDialog(this, "No database connection.");
             return;
         }
-    
+
         String monthText = (String) reportMonthCombo.getSelectedItem();
         String yearText = reportYearField.getText().trim();
-    
+
         if (monthText == null || yearText.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Please enter both month and year.");
             return;
         }
-    
+
         int month;
         int year;
-    
+
         try {
             month = Integer.parseInt(monthText);
             year = Integer.parseInt(yearText);
-    
+
             if (month < 1 || month > 12) {
                 JOptionPane.showMessageDialog(this, "Month must be between 1 and 12.");
                 return;
             }
-    
+
             if (year < 2000 || year > 2100) {
                 JOptionPane.showMessageDialog(this, "Please enter a valid year.");
                 return;
             }
-    
+
         } catch (NumberFormatException ex) {
             JOptionPane.showMessageDialog(this, "Month and year must be valid numbers.");
             return;
         }
-    
+
         loadInDemandGuidesReport(month, year);
         loadTopTravelersReport(month, year);
     }
@@ -1411,14 +1411,14 @@ public class HomestayBooking extends JFrame {
             GROUP BY g.guide_id, g.last_name, g.first_name, g.specialization
             ORDER BY hire_count DESC, guide_name ASC
         """;
-    
+
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, month);
             ps.setInt(2, year);
-    
+
             try (ResultSet rs = ps.executeQuery()) {
                 inDemandGuidesModel.setRowCount(0);
-    
+
                 while (rs.next()) {
                     inDemandGuidesModel.addRow(new Object[] {
                             rs.getString("guide_id"),
@@ -1428,7 +1428,7 @@ public class HomestayBooking extends JFrame {
                     });
                 }
             }
-    
+
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this, "Error loading in-demand guides report: " + ex.getMessage());
         }
@@ -1448,14 +1448,14 @@ public class HomestayBooking extends JFrame {
             GROUP BY gs.guest_id, gs.last_name, gs.first_name
             ORDER BY trip_count DESC, guest_name ASC
         """;
-    
+
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, month);
             ps.setInt(2, year);
-    
+
             try (ResultSet rs = ps.executeQuery()) {
                 topTravelersModel.setRowCount(0);
-    
+
                 while (rs.next()) {
                     topTravelersModel.addRow(new Object[] {
                             rs.getString("guest_id"),
@@ -1464,7 +1464,7 @@ public class HomestayBooking extends JFrame {
                     });
                 }
             }
-    
+
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this, "Error loading top travelers report: " + ex.getMessage());
         }
@@ -1580,29 +1580,29 @@ public class HomestayBooking extends JFrame {
         JButton refreshBtn = new JButton("Refresh Dropdown Values");
         JButton computeBtn = new JButton("Compute Final Amount");
         JButton saveBtn = new JButton("Save Transaction");
-    JButton viewHistoryBtn = new JButton("Refresh Transaction History");
+        JButton viewHistoryBtn = new JButton("Refresh Transaction History");
 
-    DefaultTableModel historyModel = new DefaultTableModel();
-    JTable historyTable = new JTable(historyModel);
-    historyModel.setColumnIdentifiers(new String[]{
-        "Transaction ID", "Guest", "Service", "Reference", "Start Date", "End Date", "Final Amount", "Payment Status"
-    });
+        DefaultTableModel historyModel = new DefaultTableModel();
+        JTable historyTable = new JTable(historyModel);
+        historyModel.setColumnIdentifiers(new String[]{
+                "Transaction ID", "Guest", "Service", "Reference", "Start Date", "End Date", "Final Amount", "Payment Status"
+        });
 
-    formPanel.add(new JLabel("Guest:")); formPanel.add(guestCombo);
-    formPanel.add(new JLabel("Homestay (for Accommodation/Combined):")); formPanel.add(homestayCombo);
-    formPanel.add(new JLabel("Guide (for Tour/Combined):")); formPanel.add(guideCombo);
-    formPanel.add(new JLabel("Tour Package (for Tour/Combined):")); formPanel.add(tourCombo);
-    formPanel.add(new JLabel("Service Type:")); formPanel.add(serviceType);
-    formPanel.add(new JLabel("Start Date (YYYY-MM-DD):")); formPanel.add(startDate);
-    formPanel.add(new JLabel("End Date:")); formPanel.add(endDate);
-    formPanel.add(new JLabel("Base Amount:")); formPanel.add(baseAmount);
-    formPanel.add(new JLabel("Additional Charges:")); formPanel.add(additional);
-    formPanel.add(new JLabel("Discount:")); formPanel.add(discount);
-    formPanel.add(new JLabel("Final Amount:")); formPanel.add(finalAmount);
-    formPanel.add(new JLabel("Payment Method:")); formPanel.add(paymentMethod);
-    formPanel.add(new JLabel("Payment Status:")); formPanel.add(paymentStatus);
-    formPanel.add(refreshBtn); formPanel.add(viewHistoryBtn);
-    formPanel.add(computeBtn); formPanel.add(saveBtn);
+        formPanel.add(new JLabel("Guest:")); formPanel.add(guestCombo);
+        formPanel.add(new JLabel("Homestay (for Accommodation/Combined):")); formPanel.add(homestayCombo);
+        formPanel.add(new JLabel("Guide (for Tour/Combined):")); formPanel.add(guideCombo);
+        formPanel.add(new JLabel("Tour Package (for Tour/Combined):")); formPanel.add(tourCombo);
+        formPanel.add(new JLabel("Service Type:")); formPanel.add(serviceType);
+        formPanel.add(new JLabel("Start Date (YYYY-MM-DD):")); formPanel.add(startDate);
+        formPanel.add(new JLabel("End Date:")); formPanel.add(endDate);
+        formPanel.add(new JLabel("Base Amount:")); formPanel.add(baseAmount);
+        formPanel.add(new JLabel("Additional Charges:")); formPanel.add(additional);
+        formPanel.add(new JLabel("Discount:")); formPanel.add(discount);
+        formPanel.add(new JLabel("Final Amount:")); formPanel.add(finalAmount);
+        formPanel.add(new JLabel("Payment Method:")); formPanel.add(paymentMethod);
+        formPanel.add(new JLabel("Payment Status:")); formPanel.add(paymentStatus);
+        formPanel.add(refreshBtn); formPanel.add(viewHistoryBtn);
+        formPanel.add(computeBtn); formPanel.add(saveBtn);
 
         loadTransactionDropdowns(guestCombo, homestayCombo, guideCombo, tourCombo);
         loadTransactionHistory(historyModel);
@@ -1748,8 +1748,8 @@ public class HomestayBooking extends JFrame {
         }
 
         String idColumn = tableHasColumn("guest_activity_transaction", "activity_transaction_id")
-            ? "activity_transaction_id"
-            : (tableHasColumn("guest_activity_transaction", "transaction_id") ? "transaction_id" : null);
+                ? "activity_transaction_id"
+                : (tableHasColumn("guest_activity_transaction", "transaction_id") ? "transaction_id" : null);
 
         if (idColumn == null) {
             JOptionPane.showMessageDialog(this, "Transaction history could not be loaded: no transaction ID column found.");
@@ -1762,13 +1762,13 @@ public class HomestayBooking extends JFrame {
                 "gat.final_amount, gat.payment_confirmation_status " +
                 "FROM guest_activity_transaction gat " +
                 "LEFT JOIN guest g ON g.guest_id = gat.guest_id " +
-            "ORDER BY gat.activity_start_date DESC, gat." + idColumn + " DESC";
+                "ORDER BY gat.activity_start_date DESC, gat." + idColumn + " DESC";
 
         try (Statement st = conn.createStatement();
              ResultSet rs = st.executeQuery(sql)) {
             while (rs.next()) {
                 model.addRow(new Object[]{
-                rs.getObject("txn_id"),
+                        rs.getObject("txn_id"),
                         rs.getString("guest_name"),
                         rs.getString("service_type"),
                         rs.getObject("reference_id"),
@@ -2013,230 +2013,230 @@ public class HomestayBooking extends JFrame {
     // -------------------------
 // BOOKING TRANSACTION PANEL
 // -------------------------
-private JPanel bookingTransactionPanel() {
-    JPanel panel = new JPanel(new BorderLayout());
+    private JPanel bookingTransactionPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
 
-    // --- Form at the top ---
-    JPanel form = new JPanel(new GridLayout(0, 2, 5, 5));
+        // --- Form at the top ---
+        JPanel form = new JPanel(new GridLayout(0, 2, 5, 5));
 
-    // Guest dropdown
-    JComboBox<SelectionItem> guestCombo = new JComboBox<>();
-    // Property dropdown
-    JComboBox<SelectionItem> propertyCombo = new JComboBox<>();
-    // Date fields
-    JTextField checkInField  = new JTextField("YYYY-MM-DD");
-    JTextField checkOutField = new JTextField("YYYY-MM-DD");
-    // Cost display (auto-calculated, read-only)
-    JTextField totalCostField = new JTextField();
-    totalCostField.setEditable(false);
-    // Status dropdown
-    JComboBox<String> statusCombo = new JComboBox<>(new String[]{"Confirmed", "Pending"});
+        // Guest dropdown
+        JComboBox<SelectionItem> guestCombo = new JComboBox<>();
+        // Property dropdown
+        JComboBox<SelectionItem> propertyCombo = new JComboBox<>();
+        // Date fields
+        JTextField checkInField  = new JTextField("YYYY-MM-DD");
+        JTextField checkOutField = new JTextField("YYYY-MM-DD");
+        // Cost display (auto-calculated, read-only)
+        JTextField totalCostField = new JTextField();
+        totalCostField.setEditable(false);
+        // Status dropdown
+        JComboBox<String> statusCombo = new JComboBox<>(new String[]{"Confirmed", "Pending"});
 
-    form.add(new JLabel("Guest:"));           form.add(guestCombo);
-    form.add(new JLabel("Property:"));        form.add(propertyCombo);
-    form.add(new JLabel("Check-in Date:"));   form.add(checkInField);
-    form.add(new JLabel("Check-out Date:"));  form.add(checkOutField);
-    form.add(new JLabel("Total Stay Cost:")); form.add(totalCostField);
-    form.add(new JLabel("Status:"));          form.add(statusCombo);
+        form.add(new JLabel("Guest:"));           form.add(guestCombo);
+        form.add(new JLabel("Property:"));        form.add(propertyCombo);
+        form.add(new JLabel("Check-in Date:"));   form.add(checkInField);
+        form.add(new JLabel("Check-out Date:"));  form.add(checkOutField);
+        form.add(new JLabel("Total Stay Cost:")); form.add(totalCostField);
+        form.add(new JLabel("Status:"));          form.add(statusCombo);
 
-    // --- Buttons ---
-    JButton loadDropdownsBtn  = new JButton("Load Guests & Properties");
-    JButton calcCostBtn       = new JButton("Calculate Cost");
-    JButton bookBtn           = new JButton("Confirm Booking");
-    JButton loadHistoryBtn    = new JButton("Load Booking History");
+        // --- Buttons ---
+        JButton loadDropdownsBtn  = new JButton("Load Guests & Properties");
+        JButton calcCostBtn       = new JButton("Calculate Cost");
+        JButton bookBtn           = new JButton("Confirm Booking");
+        JButton loadHistoryBtn    = new JButton("Load Booking History");
 
-    // --- History table at the bottom ---
-    DefaultTableModel historyModel = new DefaultTableModel();
-    JTable historyTable = new JTable(historyModel);
-    historyModel.setColumnIdentifiers(new String[]{
-        "Booking ID", "Guest Name", "Property", "Check-in", "Check-out",
-        "Total Cost", "Status"
-    });
+        // --- History table at the bottom ---
+        DefaultTableModel historyModel = new DefaultTableModel();
+        JTable historyTable = new JTable(historyModel);
+        historyModel.setColumnIdentifiers(new String[]{
+                "Booking ID", "Guest Name", "Property", "Check-in", "Check-out",
+                "Total Cost", "Status"
+        });
 
-    // Load dropdowns
-    loadDropdownsBtn.addActionListener(e -> {
-        if (conn == null) { JOptionPane.showMessageDialog(this, "No DB connection."); return; }
-        loadSelectionItems(guestCombo,
-            "SELECT guest_id AS item_id, CONCAT(first_name,' ',last_name) AS item_label FROM guest ORDER BY guest_id");
-        loadSelectionItems(propertyCombo,
-            "SELECT property_id AS item_id, property_name AS item_label FROM homestay ORDER BY property_id");
-        JOptionPane.showMessageDialog(this, "Dropdowns loaded.");
-    });
+        // Load dropdowns
+        loadDropdownsBtn.addActionListener(e -> {
+            if (conn == null) { JOptionPane.showMessageDialog(this, "No DB connection."); return; }
+            loadSelectionItems(guestCombo,
+                    "SELECT guest_id AS item_id, CONCAT(first_name,' ',last_name) AS item_label FROM guest ORDER BY guest_id");
+            loadSelectionItems(propertyCombo,
+                    "SELECT property_id AS item_id, property_name AS item_label FROM homestay ORDER BY property_id");
+            JOptionPane.showMessageDialog(this, "Dropdowns loaded.");
+        });
 
-    // Auto-calculate total stay cost based on dates and property price per night
-    calcCostBtn.addActionListener(e -> {
-        try {
+        // Auto-calculate total stay cost based on dates and property price per night
+        calcCostBtn.addActionListener(e -> {
+            try {
+                SelectionItem selectedProperty = (SelectionItem) propertyCombo.getSelectedItem();
+                if (selectedProperty == null) {
+                    JOptionPane.showMessageDialog(this, "Please select a property first.");
+                    return;
+                }
+                Date checkIn  = Date.valueOf(checkInField.getText().trim());
+                Date checkOut = Date.valueOf(checkOutField.getText().trim());
+
+                if (!checkOut.after(checkIn)) {
+                    JOptionPane.showMessageDialog(this, "Check-out date must be after check-in date.");
+                    return;
+                }
+
+                long nights = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24);
+                double pricePerNight = getPriceById("homestay", "property_id", "price_per_night", selectedProperty.id);
+                double total = nights * pricePerNight;
+                totalCostField.setText(String.format("%.2f", total));
+            } catch (IllegalArgumentException ex) {
+                JOptionPane.showMessageDialog(this, "Invalid date format. Use YYYY-MM-DD.");
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Error calculating cost: " + ex.getMessage());
+            }
+        });
+
+        // Confirm booking — runs all spec validations before inserting
+        bookBtn.addActionListener(e -> {
+            if (conn == null) { JOptionPane.showMessageDialog(this, "No DB connection."); return; }
+
+            SelectionItem selectedGuest    = (SelectionItem) guestCombo.getSelectedItem();
             SelectionItem selectedProperty = (SelectionItem) propertyCombo.getSelectedItem();
-            if (selectedProperty == null) {
-                JOptionPane.showMessageDialog(this, "Please select a property first.");
+
+            if (selectedGuest == null || selectedProperty == null) {
+                JOptionPane.showMessageDialog(this, "Please select a guest and property.");
                 return;
             }
-            Date checkIn  = Date.valueOf(checkInField.getText().trim());
-            Date checkOut = Date.valueOf(checkOutField.getText().trim());
-
-            if (!checkOut.after(checkIn)) {
-                JOptionPane.showMessageDialog(this, "Check-out date must be after check-in date.");
-                return;
-            }
-
-            long nights = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24);
-            double pricePerNight = getPriceById("homestay", "property_id", "price_per_night", selectedProperty.id);
-            double total = nights * pricePerNight;
-            totalCostField.setText(String.format("%.2f", total));
-        } catch (IllegalArgumentException ex) {
-            JOptionPane.showMessageDialog(this, "Invalid date format. Use YYYY-MM-DD.");
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Error calculating cost: " + ex.getMessage());
-        }
-    });
-
-    // Confirm booking — runs all spec validations before inserting
-    bookBtn.addActionListener(e -> {
-        if (conn == null) { JOptionPane.showMessageDialog(this, "No DB connection."); return; }
-
-        SelectionItem selectedGuest    = (SelectionItem) guestCombo.getSelectedItem();
-        SelectionItem selectedProperty = (SelectionItem) propertyCombo.getSelectedItem();
-
-        if (selectedGuest == null || selectedProperty == null) {
-            JOptionPane.showMessageDialog(this, "Please select a guest and property.");
-            return;
-        }
-        if (totalCostField.getText().trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please calculate the total cost first.");
-            return;
-        }
-
-        try {
-            Date checkIn  = Date.valueOf(checkInField.getText().trim());
-            Date checkOut = Date.valueOf(checkOutField.getText().trim());
-
-            if (!checkOut.after(checkIn)) {
-                JOptionPane.showMessageDialog(this, "Check-out date must be after check-in date.");
+            if (totalCostField.getText().trim().isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Please calculate the total cost first.");
                 return;
             }
 
-            // SERVICE 1: Guest Trust Validation — block if trust rating is 1.0 (blacklisted threshold)
-            String trustSQL = "SELECT trust_rating, valid_id_status FROM guest WHERE guest_id = ?";
-            try (PreparedStatement ps = conn.prepareStatement(trustSQL)) {
-                ps.setString(1, selectedGuest.id);
-                ResultSet rs = ps.executeQuery();
-                if (rs.next()) {
-                    double trustRating = rs.getDouble("trust_rating");
-                    String idStatus    = rs.getString("valid_id_status");
-                    if (trustRating <= 1.0) {
-                        JOptionPane.showMessageDialog(this,
-                            "Booking denied. Guest has a trust rating of " + trustRating + " and is blacklisted.");
-                        return;
-                    }
-                    if ("Not Verified".equals(idStatus)) {
-                        int confirm = JOptionPane.showConfirmDialog(this,
-                            "Warning: Guest ID is Not Verified. Proceed anyway?",
-                            "ID Verification Warning", JOptionPane.YES_NO_OPTION);
-                        if (confirm != JOptionPane.YES_OPTION) return;
+            try {
+                Date checkIn  = Date.valueOf(checkInField.getText().trim());
+                Date checkOut = Date.valueOf(checkOutField.getText().trim());
+
+                if (!checkOut.after(checkIn)) {
+                    JOptionPane.showMessageDialog(this, "Check-out date must be after check-in date.");
+                    return;
+                }
+
+                // SERVICE 1: Guest Trust Validation — block if trust rating is 1.0 (blacklisted threshold)
+                String trustSQL = "SELECT trust_rating, valid_id_status FROM guest WHERE guest_id = ?";
+                try (PreparedStatement ps = conn.prepareStatement(trustSQL)) {
+                    ps.setString(1, selectedGuest.id);
+                    ResultSet rs = ps.executeQuery();
+                    if (rs.next()) {
+                        double trustRating = rs.getDouble("trust_rating");
+                        String idStatus    = rs.getString("valid_id_status");
+                        if (trustRating <= 1.0) {
+                            JOptionPane.showMessageDialog(this,
+                                    "Booking denied. Guest has a trust rating of " + trustRating + " and is blacklisted.");
+                            return;
+                        }
+                        if ("Not Verified".equals(idStatus)) {
+                            int confirm = JOptionPane.showConfirmDialog(this,
+                                    "Warning: Guest ID is Not Verified. Proceed anyway?",
+                                    "ID Verification Warning", JOptionPane.YES_NO_OPTION);
+                            if (confirm != JOptionPane.YES_OPTION) return;
+                        }
                     }
                 }
-            }
 
-            // SERVICE 2: Property Availability Check
-            String availSQL = "SELECT availability_status, price_per_night FROM homestay WHERE property_id = ?";
-            try (PreparedStatement ps = conn.prepareStatement(availSQL)) {
-                ps.setString(1, selectedProperty.id);
-                ResultSet rs = ps.executeQuery();
-                if (rs.next()) {
-                    String status = rs.getString("availability_status");
-                    if ("Booked".equals(status)) {
-                        JOptionPane.showMessageDialog(this,
-                            "Property is currently Booked and not available.");
-                        return;
-                    }
-                }
-            }
-
-            double totalCost = Double.parseDouble(totalCostField.getText().trim());
-            String bookingStatus = statusCombo.getSelectedItem().toString();
-
-            // SERVICE 3: Booking Finalization — insert booking record
-            String insertSQL = "INSERT INTO booking_transaction " +
-                "(guest_id, property_id, check_in_date, check_out_date, total_stay_cost, status) " +
-                "VALUES (?, ?, ?, ?, ?, ?)";
-            try (PreparedStatement ps = conn.prepareStatement(insertSQL)) {
-                ps.setInt(1, Integer.parseInt(selectedGuest.id));
-                ps.setInt(2, Integer.parseInt(selectedProperty.id));
-                ps.setDate(3, checkIn);
-                ps.setDate(4, checkOut);
-                ps.setDouble(5, totalCost);
-                ps.setString(6, bookingStatus);
-                ps.executeUpdate();
-            }
-
-            // Update property status to Booked if confirmed
-            if ("Confirmed".equals(bookingStatus)) {
-                String updateSQL = "UPDATE homestay SET availability_status = 'Booked' WHERE property_id = ?";
-                try (PreparedStatement ps = conn.prepareStatement(updateSQL)) {
+                // SERVICE 2: Property Availability Check
+                String availSQL = "SELECT availability_status, price_per_night FROM homestay WHERE property_id = ?";
+                try (PreparedStatement ps = conn.prepareStatement(availSQL)) {
                     ps.setString(1, selectedProperty.id);
+                    ResultSet rs = ps.executeQuery();
+                    if (rs.next()) {
+                        String status = rs.getString("availability_status");
+                        if ("Booked".equals(status)) {
+                            JOptionPane.showMessageDialog(this,
+                                    "Property is currently Booked and not available.");
+                            return;
+                        }
+                    }
+                }
+
+                double totalCost = Double.parseDouble(totalCostField.getText().trim());
+                String bookingStatus = statusCombo.getSelectedItem().toString();
+
+                // SERVICE 3: Booking Finalization — insert booking record
+                String insertSQL = "INSERT INTO booking_transaction " +
+                        "(guest_id, property_id, check_in_date, check_out_date, total_stay_cost, status) " +
+                        "VALUES (?, ?, ?, ?, ?, ?)";
+                try (PreparedStatement ps = conn.prepareStatement(insertSQL)) {
+                    ps.setInt(1, Integer.parseInt(selectedGuest.id));
+                    ps.setInt(2, Integer.parseInt(selectedProperty.id));
+                    ps.setDate(3, checkIn);
+                    ps.setDate(4, checkOut);
+                    ps.setDouble(5, totalCost);
+                    ps.setString(6, bookingStatus);
                     ps.executeUpdate();
                 }
+
+                // Update property status to Booked if confirmed
+                if ("Confirmed".equals(bookingStatus)) {
+                    String updateSQL = "UPDATE homestay SET availability_status = 'Booked' WHERE property_id = ?";
+                    try (PreparedStatement ps = conn.prepareStatement(updateSQL)) {
+                        ps.setString(1, selectedProperty.id);
+                        ps.executeUpdate();
+                    }
+                }
+
+                JOptionPane.showMessageDialog(this, "Booking confirmed successfully!");
+                loadBookingHistory(historyModel);
+
+            } catch (IllegalArgumentException ex) {
+                JOptionPane.showMessageDialog(this, "Invalid date format. Use YYYY-MM-DD.");
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Error processing booking:\n" + ex.getMessage());
             }
+        });
 
-            JOptionPane.showMessageDialog(this, "Booking confirmed successfully!");
-            loadBookingHistory(historyModel);
+        // Load booking history into table
+        loadHistoryBtn.addActionListener(e -> loadBookingHistory(historyModel));
 
-        } catch (IllegalArgumentException ex) {
-            JOptionPane.showMessageDialog(this, "Invalid date format. Use YYYY-MM-DD.");
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Error processing booking:\n" + ex.getMessage());
-        }
-    });
+        // Button row
+        JPanel buttons = new JPanel();
+        buttons.add(loadDropdownsBtn);
+        buttons.add(calcCostBtn);
+        buttons.add(bookBtn);
+        buttons.add(loadHistoryBtn);
 
-    // Load booking history into table
-    loadHistoryBtn.addActionListener(e -> loadBookingHistory(historyModel));
+        JPanel top = new JPanel(new BorderLayout());
+        top.add(form, BorderLayout.CENTER);
+        top.add(buttons, BorderLayout.SOUTH);
 
-    // Button row
-    JPanel buttons = new JPanel();
-    buttons.add(loadDropdownsBtn);
-    buttons.add(calcCostBtn);
-    buttons.add(bookBtn);
-    buttons.add(loadHistoryBtn);
-
-    JPanel top = new JPanel(new BorderLayout());
-    top.add(form, BorderLayout.CENTER);
-    top.add(buttons, BorderLayout.SOUTH);
-
-    panel.add(top, BorderLayout.NORTH);
-    panel.add(new JScrollPane(historyTable), BorderLayout.CENTER);
-    return panel;
-}
-
-private void loadBookingHistory(DefaultTableModel model) {
-    model.setRowCount(0);
-    if (conn == null) return;
-
-    String sql = "SELECT bt.booking_id, " +
-        "CONCAT(g.first_name, ' ', g.last_name) AS guest_name, " +
-        "h.property_name, bt.check_in_date, bt.check_out_date, " +
-        "bt.total_stay_cost, bt.status " +
-        "FROM booking_transaction bt " +
-        "JOIN guest g ON g.guest_id = bt.guest_id " +
-        "JOIN homestay h ON h.property_id = bt.property_id " +
-        "ORDER BY bt.check_in_date DESC, bt.booking_id DESC";
-
-    try (Statement st = conn.createStatement();
-         ResultSet rs = st.executeQuery(sql)) {
-        while (rs.next()) {
-            model.addRow(new Object[]{
-                rs.getInt("booking_id"),
-                rs.getString("guest_name"),
-                rs.getString("property_name"),
-                rs.getDate("check_in_date"),
-                rs.getDate("check_out_date"),
-                rs.getDouble("total_stay_cost"),
-                rs.getString("status")
-            });
-        }
-    } catch (Exception ex) {
-        JOptionPane.showMessageDialog(this, "Error loading booking history: " + ex.getMessage());
+        panel.add(top, BorderLayout.NORTH);
+        panel.add(new JScrollPane(historyTable), BorderLayout.CENTER);
+        return panel;
     }
-}
+
+    private void loadBookingHistory(DefaultTableModel model) {
+        model.setRowCount(0);
+        if (conn == null) return;
+
+        String sql = "SELECT bt.booking_id, " +
+                "CONCAT(g.first_name, ' ', g.last_name) AS guest_name, " +
+                "h.property_name, bt.check_in_date, bt.check_out_date, " +
+                "bt.total_stay_cost, bt.status " +
+                "FROM booking_transaction bt " +
+                "JOIN guest g ON g.guest_id = bt.guest_id " +
+                "JOIN homestay h ON h.property_id = bt.property_id " +
+                "ORDER BY bt.check_in_date DESC, bt.booking_id DESC";
+
+        try (Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+            while (rs.next()) {
+                model.addRow(new Object[]{
+                        rs.getInt("booking_id"),
+                        rs.getString("guest_name"),
+                        rs.getString("property_name"),
+                        rs.getDate("check_in_date"),
+                        rs.getDate("check_out_date"),
+                        rs.getDouble("total_stay_cost"),
+                        rs.getString("status")
+                });
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Error loading booking history: " + ex.getMessage());
+        }
+    }
 
 
 
@@ -2281,7 +2281,7 @@ private void loadBookingHistory(DefaultTableModel model) {
         }
     }
 
-  
+
     private JPanel tourReservationPanel() {
         JPanel panel = new JPanel(new BorderLayout(8, 8));
         JPanel formPanel = new JPanel(new GridLayout(7, 2, 5, 5));
@@ -2317,16 +2317,16 @@ private void loadBookingHistory(DefaultTableModel model) {
 
                 if (guest == null || tour == null || guide == null) throw new Exception("Select all fields.");
 
-                int guestId = Integer.parseInt(guest.id);
-                int packageId = Integer.parseInt(tour.id);
-                int guideId = Integer.parseInt(guide.id);
+                String guestId = guest.id;
+                String packageId = tour.id;
+                String guideId = guide.id;
 
                 conn.setAutoCommit(false);
 
                 // Capacity & Cost
                 double basePrice = 0; int maxGuests = 0;
                 try (PreparedStatement ps = conn.prepareStatement("SELECT price, max_guests FROM tour_package WHERE package_id = ?")) {
-                    ps.setInt(1, packageId);
+                    ps.setString(1, packageId);
                     ResultSet rs = ps.executeQuery();
                     if (rs.next()) { basePrice = rs.getDouble("price"); maxGuests = rs.getInt("max_guests"); }
                 }
@@ -2335,7 +2335,7 @@ private void loadBookingHistory(DefaultTableModel model) {
 
                 //  Guide Cross-Check
                 try (PreparedStatement ps = conn.prepareStatement("SELECT COUNT(*) FROM tour_reservation WHERE assigned_guide_id = ? AND tour_date = ? AND reservation_status = 'Confirmed'")) {
-                    ps.setInt(1, guideId); ps.setDate(2, Date.valueOf(date));
+                    ps.setString(1, guideId); ps.setDate(2, Date.valueOf(date));
                     ResultSet rs = ps.executeQuery();
                     if (rs.next() && rs.getInt(1) > 0) throw new Exception("Guide is already booked on this date.");
                 }
@@ -2343,7 +2343,7 @@ private void loadBookingHistory(DefaultTableModel model) {
                 //  Insert
                 String insertSql = "INSERT INTO tour_reservation (guest_id, package_id, assigned_guide_id, tour_date, number_of_pax, total_tour_cost, reservation_status) VALUES (?, ?, ?, ?, ?, ?, ?)";
                 try (PreparedStatement ps = conn.prepareStatement(insertSql)) {
-                    ps.setInt(1, guestId); ps.setInt(2, packageId); ps.setInt(3, guideId);
+                    ps.setString(1, guestId); ps.setString(2, packageId); ps.setString(3, guideId);
                     ps.setDate(4, Date.valueOf(date)); ps.setInt(5, pax); ps.setDouble(6, totalCost);
                     ps.setString(7, statusCombo.getSelectedItem().toString());
                     ps.executeUpdate();
@@ -2369,15 +2369,15 @@ private void loadBookingHistory(DefaultTableModel model) {
         try (Statement st = conn.createStatement()) {
             guests.removeAllItems(); guides.removeAllItems(); tours.removeAllItems();
             ResultSet rs = st.executeQuery("SELECT guest_id, CONCAT(first_name, ' ', last_name) FROM guest");
-            while (rs.next()) guests.addItem(new SelectionItem(String.valueOf(rs.getInt(1)), rs.getString(2)));
+            while (rs.next()) guests.addItem(new SelectionItem(String.valueOf(rs.getString(1)), rs.getString(2)));
             rs = st.executeQuery("SELECT guide_id, CONCAT(first_name, ' ', last_name) FROM guide");
-            while (rs.next()) guides.addItem(new SelectionItem(String.valueOf(rs.getInt(1)), rs.getString(2)));
+            while (rs.next()) guides.addItem(new SelectionItem(String.valueOf(rs.getString(1)), rs.getString(2)));
             rs = st.executeQuery("SELECT package_id, package_name FROM tour_package");
-            while (rs.next()) tours.addItem(new SelectionItem(String.valueOf(rs.getInt(1)), rs.getString(2)));
+            while (rs.next()) tours.addItem(new SelectionItem(String.valueOf(rs.getString(1)), rs.getString(2)));
         } catch (Exception ignored) {}
     }
 
-   
+
     private JPanel tourPerformanceReportPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         JPanel top = new JPanel();
