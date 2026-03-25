@@ -2160,8 +2160,8 @@ private JPanel bookingTransactionPanel() {
                 "(guest_id, property_id, check_in_date, check_out_date, total_stay_cost, status) " +
                 "VALUES (?, ?, ?, ?, ?, ?)";
             try (PreparedStatement ps = conn.prepareStatement(insertSQL)) {
-                ps.setInt(1, Integer.parseInt(selectedGuest.id));
-                ps.setInt(2, Integer.parseInt(selectedProperty.id));
+                ps.setString(1, selectedGuest.id);
+                ps.setString(2, selectedProperty.id);
                 ps.setDate(3, checkIn);
                 ps.setDate(4, checkOut);
                 ps.setDouble(5, totalCost);
