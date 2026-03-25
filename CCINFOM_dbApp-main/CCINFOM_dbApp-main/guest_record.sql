@@ -108,7 +108,7 @@ INSERT INTO guest VALUES
 ('H3','Hannah','Kim','Busan, South Korea','+82-10-9876-5432','hannah.kim@outlook.kr','Pending',3.9),
 ('H4','Miguel','Santos','Cagayan de Oro, Philippines','+63-917-222-0003','miguel.santos@yahoo.com','Verified',4.7),
 ('H5','Chloe','Anderson','Vancouver, Canada','+1-604-555-8899','chloe.anderson@icloud.com','Not Verified',3.6),
-('H6','Rafael','Morales','Madrid, Spain','+34-612-345-678','rafael.morales@travelmail.es','Verified',4.8);
+('H6','Rafael','Morales','Madrid, Spain','+34-612-345-678','rafael.morales@travelmail.es','Verified',4.8),
 ('T1','Test','Blacklisted','Manila, Philippines','+63-000-000-0000','test.blacklisted@gmail.com','Not Verified',1.0);
 
 -- Insert Homestays
